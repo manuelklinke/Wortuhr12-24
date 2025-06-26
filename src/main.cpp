@@ -4,7 +4,7 @@
 #include <Adafruit_NeoMatrix.h> //https://github.com/adafruit/Adafruit_NeoMatrix
 #include <Adafruit_NeoPixel.h>
 
-/*
+/* V1
    0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
 0  E  S  B  I  S  T  I  N  V  I  E  L  E  N  Z  E  I  T  F  Ü  N  F  Ü  R
 1  D  R  E  I  N  E  R  S  E  C  H  S  I  E  B  E  N  V  I  E  R  T  E  L
@@ -18,7 +18,21 @@
 9  Z  W  Ö  L  F  K  A  F  F  E  E  U  H  R  I  P  R  Ä  A  B  E  N  D  S
 10 U  M  O  R  G  E  N  S  V  O  R  M  I  T  T  A  G  S  T  U  N  D  E  N
 11 G  R  A  D  U  R  L  A  U  B  Z  U  H  R  W  A  R  M  I  R  K  A  L  T
-
+*/
+/* V2
+   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+0  E  S  B  I  S  T  E  I  N  E  V  I  E  L  E  N  Z  E  I  T  J  F  Ü  R
+1  D  R  E  I  V  I  E  R  T  E  L  F  Ü  N  F  N  E  U  N  A  C  H  T  S
+2  V  O  R  W  O  C  H  E  N  E  N  D  E  N  O  C  H  A  L  B  I  E  R  E
+3  Z  W  E  I  N  S  E  C  H  S  I  E  B  E  N  E  I  N  E  Z  E  H  N  Ö
+4  S  T  U  N  D  E  N  U  L  L  A  U  H  R  S  P  Ä  T  E  R  U  N  D  U
+5  D  R  E  I  N  E  R  V  I  E  R  S  E  C  H  S  I  E  B  E  N  E  U  N
+6  F  Ü  N  F  A  C  H  T  Z  E  H  N  I  C  H  T  S  Z  W  E  I  S  T  Y
+7  Z  U  N  D  E  L  F  Ü  N  F  Z  I  G  V  I  E  R  Z  I  G  U  T  E  N
+8  D  R  E  I  ß  I  G  Z  W  A  N  Z  I  G  Z  W  Ö  L  F  R  Ü  H  E  R
+9  M  I  N  U  T  E  N  I  X  B  I  S  A  M  Ö  P  R  Ä  A  B  E  N  D  S
+10 U  M  O  R  G  E  N  S  V  O  R  M  I  T  T  A  G  S  K  A  F  F  E  E
+11 Z  U  R  L  A  U  B  G  R  A  D  I  R  K  A  L  T  W  A  R  M  I  R  Q
 */
 
 #define NEOPIXEL_PIN D4
@@ -30,11 +44,16 @@
 #define MODE_WORD_CLOCK 0
 #define MODE_WORD_CLOCK_SECONDS 1
 #define MODE_WORD_CLOCK_COUNT_DOWN 2
-#define MODE_MARQUEE_TIME 3
-#define MODE_BINARY_CLOCK 4
-#define MODE_RESISTOR_COLOR_CODE_CLOCK 5
-#define MODE_GAME_OF_LIFE 6
-#define MODE_MATRIX_RAIN 7
+#define MODE_WORD_CLOCK_DAYTIME 3
+#define MODE_MARQUEE_TIME 4
+#define MODE_BINARY_CLOCK 5
+#define MODE_RESISTOR_COLOR_CODE_CLOCK 6
+#define MODE_GAME_OF_LIFE 7
+#define MODE_MATRIX_RAIN 8
+#define MODE_TEMPERATURE 9
+#define MODE_RATE_TEMPERATURE 10
+#define MODE_TIME_FOR_FACTS 11
+#define MODE_DISPLAY_SPECIAL_EVENTS 12
 
 
 #define WORD_CLOCK_MODE_SHORT 0
@@ -84,6 +103,30 @@ typedef struct
 }stateType_t;
 
 static stateType_t State;
+
+
+uint16_t getColor(){
+  uint16_t color = 0;
+
+  switch(State.Color_Mode){
+    case COLOR_MODE_MONO:
+      color = State.Color;
+      break;
+
+     case COLOR_MODE_MIXED:
+      color = colors[rand()%MAX_COLORS];
+      if(color == State.last_Color){
+        color = colors[State.Now.second()%MAX_COLORS];
+      }
+      break;
+
+    default: 
+      color = 0;
+  }
+
+  State.last_Color = color;
+  return color;
+}
 
 void resetGrid(){
   //set all the array values to 0 (off):
@@ -710,272 +753,464 @@ void draw_AM(uint16_t color){
   State.grid[8][5] = color;
 }
 
-void drawWordClockMin(){
-  uint8_t Min = State.Now.minute();
+void drawWordClockMin(uint8_t min, bool useAsSeconds){
+  uint8_t Min = min;
+  if(useAsSeconds == true){
+    if(Min == 0){
+      draw_Std_NULL(getColor());
+    }
+  }
   if(Min != 0){
     if(Min == 1){
-      draw_Min_EINE(colors[1]);
-      draw_MINUTE(colors[1]);
-      draw_NACH(colors[1]);
+      if(useAsSeconds == false){
+      draw_Min_EINE(getColor());
+      draw_MINUTE(getColor());
+      draw_NACH(getColor());
+      }else{
+        draw_Std_EINS(getColor());
+      }
     }
-    if((Min >= 2) && (Min <= 39)){
+    if((Min >= 2) && (Min <= 59)){
       if(Min == 2){
-        draw_Min_ZWEI(colors[1]);
+        draw_Min_ZWEI(getColor());
       }
       if(Min == 3){
-        draw_Min_DREI(colors[1]);
+        draw_Min_DREI(getColor());
       }
       if(Min == 4){
-        draw_Min_VIER(colors[1]);
+        draw_Min_VIER(getColor());
       }
       if(Min == 5){
-        draw_Min_FUENF(colors[1]);
+        draw_Min_FUENF(getColor());
       }
       if(Min == 6){
-        draw_Min_SECHS(colors[1]);
+        draw_Min_SECHS(getColor());
       }
       if(Min == 7){
-        draw_Min_SIEBEN(colors[1]);
+        draw_Min_SIEBEN(getColor());
       }
       if(Min == 8){
-        draw_Min_ACHT(colors[1]);
+        draw_Min_ACHT(getColor());
       }
       if(Min == 9){
-        draw_Min_NEUN(colors[1]);
+        draw_Min_NEUN(getColor());
       }
       if(Min == 10){
-        draw_Min_ZEHN(colors[1]);
+        draw_Min_ZEHN(getColor());
       }
       if(Min == 11){
-        draw_Min_ELF(colors[1]);
+        draw_Min_ELF(getColor());
       }
       if(Min == 12){
-        draw_Min_ZWOELF(colors[1]);
+        draw_Min_ZWOELF(getColor());
       }
       if(Min == 13){
-        draw_Min_DREI(colors[1]);
-        draw_Min_ZEHN(colors[1]);
+        draw_Min_DREI(getColor());
+        draw_Min_ZEHN(getColor());
       }
       if(Min == 14){
-        draw_Min_VIER(colors[1]);
-        draw_Min_ZEHN(colors[1]);
+        draw_Min_VIER(getColor());
+        draw_Min_ZEHN(getColor());
       }
       if(Min == 15){
-        draw_Min_FUENF(colors[1]);
-        draw_Min_ZEHN(colors[1]);
+        draw_Min_FUENF(getColor());
+        draw_Min_ZEHN(getColor());
       }
       if(Min == 16){
-        draw_Min_SECHS(colors[1]);
-        draw_Min_ZEHN(colors[1]);
+        draw_Min_SECHS(getColor());
+        draw_Min_ZEHN(getColor());
       }
       if(Min == 17){
-        draw_Min_SIEB(colors[1]);
-        draw_Min_ZEHN(colors[1]);
+        draw_Min_SIEB(getColor());
+        draw_Min_ZEHN(getColor());
       }
       if(Min == 18){
-        draw_Min_ACHT(colors[1]);
-        draw_Min_ZEHN(colors[1]);
+        draw_Min_ACHT(getColor());
+        draw_Min_ZEHN(getColor());
       }
       if(Min == 19){
-        draw_Min_NEUN(colors[1]);
-        draw_Min_ZEHN(colors[1]);
+        draw_Min_NEUN(getColor());
+        draw_Min_ZEHN(getColor());
       }
       if(Min == 20){
-        draw_Min_ZWANZIG(colors[1]);
+        draw_Min_ZWANZIG(getColor());
       }
       if(Min == 21){
-        draw_Min_EIN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_ZWANZIG(colors[1]);
+        draw_Min_EIN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_ZWANZIG(getColor());
       }
       if(Min == 22){
-        draw_Min_ZWEI(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_ZWANZIG(colors[1]);
+        draw_Min_ZWEI(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_ZWANZIG(getColor());
       }
       if(Min == 23){
-        draw_Min_DREI(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_ZWANZIG(colors[1]);
+        draw_Min_DREI(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_ZWANZIG(getColor());
       }
       if(Min == 24){
-        draw_Min_VIER(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_ZWANZIG(colors[1]);
+        draw_Min_VIER(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_ZWANZIG(getColor());
       }
       if(Min == 25){
-        draw_Min_FUENF(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_ZWANZIG(colors[1]);
+        draw_Min_FUENF(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_ZWANZIG(getColor());
       }
       if(Min == 26){
-        draw_Min_SECHS(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_ZWANZIG(colors[1]);
+        draw_Min_SECHS(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_ZWANZIG(getColor());
       }
       if(Min == 27){
-        draw_Min_SIEBEN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_ZWANZIG(colors[1]);
+        draw_Min_SIEBEN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_ZWANZIG(getColor());
       }
       if(Min == 28){
-        draw_Min_ACHT(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_ZWANZIG(colors[1]);
+        draw_Min_ACHT(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_ZWANZIG(getColor());
       }
       if(Min == 29){
-        draw_Min_NEUN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_ZWANZIG(colors[1]);
+        draw_Min_NEUN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_ZWANZIG(getColor());
       }
       if(Min == 30){
-        draw_Min_DREISSIG(colors[1]);
+        draw_Min_DREISSIG(getColor());
       }
       if(Min == 31){
-        draw_Min_EIN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_DREISSIG(colors[1]);
+        draw_Min_EIN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_DREISSIG(getColor());
       }
       if(Min == 32){
-        draw_Min_ZWEI(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_DREISSIG(colors[1]);
+        draw_Min_ZWEI(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_DREISSIG(getColor());
       }
       if(Min == 33){
-        draw_Min_DREI(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_DREISSIG(colors[1]);
+        draw_Min_DREI(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_DREISSIG(getColor());
       }
       if(Min == 34){
-        draw_Min_VIER(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_DREISSIG(colors[1]);
+        draw_Min_VIER(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_DREISSIG(getColor());
       }
       if(Min == 35){
-        draw_Min_FUENF(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_DREISSIG(colors[1]);
+        draw_Min_FUENF(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_DREISSIG(getColor());
       }
       if(Min == 36){
-        draw_Min_SECHS(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_DREISSIG(colors[1]);
+        draw_Min_SECHS(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_DREISSIG(getColor());
       }
       if(Min == 37){
-        draw_Min_SIEBEN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_DREISSIG(colors[1]);
+        draw_Min_SIEBEN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_DREISSIG(getColor());
       }
       if(Min == 38){
-        draw_Min_ACHT(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_DREISSIG(colors[1]);
+        draw_Min_ACHT(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_DREISSIG(getColor());
       }
       if(Min == 39){
-        draw_Min_NEUN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_DREISSIG(colors[1]);
+        draw_Min_NEUN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_DREISSIG(getColor());
       }
       if(Min == 40){
-        draw_Min_VIERZIG(colors[1]);
+        draw_Min_VIERZIG(getColor());
       }
       if(Min == 41){
-        draw_Min_EIN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_VIERZIG(colors[1]);
+        draw_Min_EIN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_VIERZIG(getColor());
       }
       if(Min == 42){
-        draw_Min_ZWEI(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_VIERZIG(colors[1]);
+        draw_Min_ZWEI(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_VIERZIG(getColor());
       }
       if(Min == 43){
-        draw_Min_DREI(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_VIERZIG(colors[1]);
+        draw_Min_DREI(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_VIERZIG(getColor());
       }
       if(Min == 44){
-        draw_Min_VIER(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_VIERZIG(colors[1]);
+        draw_Min_VIER(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_VIERZIG(getColor());
       }
       if(Min == 45){
-        draw_Min_FUENF(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_VIERZIG(colors[1]);
+        draw_Min_FUENF(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_VIERZIG(getColor());
       }
       if(Min == 46){
-        draw_Min_SECHS(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_VIERZIG(colors[1]);
+        draw_Min_SECHS(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_VIERZIG(getColor());
       }
       if(Min == 47){
-        draw_Min_SIEBEN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_VIERZIG(colors[1]);
+        draw_Min_SIEBEN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_VIERZIG(getColor());
       }
       if(Min == 48){
-        draw_Min_ACHT(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_VIERZIG(colors[1]);
+        draw_Min_ACHT(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_VIERZIG(getColor());
       }
       if(Min == 49){
-        draw_Min_NEUN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_VIERZIG(colors[1]);
+        draw_Min_NEUN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_VIERZIG(getColor());
       }
       if(Min == 50){
-        draw_Min_FUENFZIG(colors[1]);
+        draw_Min_FUENFZIG(getColor());
       }
       if(Min == 51){
-        draw_Min_EIN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_FUENFZIG(colors[1]);
+        draw_Min_EIN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_FUENFZIG(getColor());
       }
       if(Min == 52){
-        draw_Min_ZWEI(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_FUENFZIG(colors[1]);
+        draw_Min_ZWEI(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_FUENFZIG(getColor());
       }
       if(Min == 53){
-        draw_Min_DREI(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_FUENFZIG(colors[1]);
+        draw_Min_DREI(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_FUENFZIG(getColor());
       }
       if(Min == 54){
-        draw_Min_VIER(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_FUENFZIG(colors[1]);
+        draw_Min_VIER(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_FUENFZIG(getColor());
       }
       if(Min == 55){
-        draw_Min_FUENF(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_FUENFZIG(colors[1]);
+        draw_Min_FUENF(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_FUENFZIG(getColor());
       }
       if(Min == 56){
-        draw_Min_SECHS(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_FUENFZIG(colors[1]);
+        draw_Min_SECHS(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_FUENFZIG(getColor());
       }
       if(Min == 57){
-        draw_Min_SIEBEN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_FUENFZIG(colors[1]);
+        draw_Min_SIEBEN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_FUENFZIG(getColor());
       }
       if(Min == 58){
-        draw_Min_ACHT(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_FUENFZIG(colors[1]);
+        draw_Min_ACHT(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_FUENFZIG(getColor());
       }
       if(Min == 59){
-        draw_Min_NEUN(colors[1]);
-        draw_Min_UND(colors[1]);
-        draw_Min_FUENFZIG(colors[1]);
+        draw_Min_NEUN(getColor());
+        draw_Min_UND(getColor());
+        draw_Min_FUENFZIG(getColor());
       }
-
-      draw_MINUTEN(colors[1]);
-      draw_NACH(colors[1]);
+      if(useAsSeconds == false){
+        draw_MINUTEN(getColor());
+        draw_NACH(getColor());
+      }
     }
+  }
+}
+
+void drawWordClockHour(){
+  uint8_t h = State.Now.hour();
+  uint8_t Min = State.Now.minute();
+  if(h == 0){
+    draw_Std_NULL(getColor());
+  }
+  if(h == 1){
+    if(Min != 0){
+      draw_Std_EINS(getColor());
+    }else{
+      draw_Std_EIN(getColor());
+    }
+  }
+  if(h == 2){
+    draw_Std_ZWEI(getColor());
+  }
+  if(h == 3){
+    draw_Std_DREI(getColor());
+  }
+  if(h == 4){
+    draw_Std_VIER(getColor());
+  }
+  if(h == 5){
+    draw_Std_FUENF(getColor());
+  }
+  if(h == 6){
+    draw_Std_SECHS(getColor());
+  }
+  if(h == 7){
+    draw_Std_SIEBEN(getColor());
+  }
+  if(h == 8){
+    draw_Std_ACHT(getColor());
+  }
+  if(h == 9){
+    draw_Std_NEUN(getColor());
+  }
+  if(h == 10){
+    draw_Std_ZEHN(getColor());
+  }
+  if(h == 11){
+    draw_Std_ELF(getColor());
+  }
+  if(h == 12){
+    draw_Std_ZWOELF(getColor());
+  }
+
+  //todo alternate UHR1 and UHR2
+  draw_UHR1(getColor());
+
+}
+
+void draw_daytime(){
+  draw_ES_IST(getColor());
+  if(State.Now.hour()<= 4){
+    draw_SPAET(getColor());
+    draw_NACHTS(getColor());
+  }
+  if((State.Now.hour()>4)&&(State.Now.hour()<= 9)){
+    draw_MORGENS(getColor());
+  }
+  if((State.Now.hour()>9)&&(State.Now.hour()<= 11)){
+    draw_VORMITTAGS(getColor());
+  }
+  if((State.Now.hour()>11)&&(State.Now.hour()<= 14)){
+    draw_MITTAGS(getColor());
+  }
+  if((State.Now.hour()>14)&&(State.Now.hour()<= 16)){
+    draw_NACH(getColor());
+    draw_MITTAG(getColor());
+  }
+  if((State.Now.hour()>16)&&(State.Now.hour()<= 19)){
+    draw_PRAEABEND(getColor());
+  }
+  if((State.Now.hour()>19)&&(State.Now.hour()<= 22)){
+    draw_ABEND(getColor());
+  }
+  if((State.Now.hour()>22)){
+    draw_NACHT(getColor());
+  }
+}
+
+//draw a 3x5 Zero, x,y is upper left corner
+void draw_Binary_Zero(uint8_t x, uint8_t y, uint16_t color){
+  if((x<22)&&(y<8)){
+    State.grid[x][y] = color;
+    State.grid[x+1][y] = color;
+    State.grid[x+2][y] = color;
+    State.grid[x][y+1] = color;
+    State.grid[x][y+2] = color;
+    State.grid[x][y+3] = color;
+    State.grid[x][y+4] = color;
+    State.grid[x+2][y+1] = color;
+    State.grid[x+2][y+2] = color;
+    State.grid[x+2][y+3] = color;
+    State.grid[x+2][y+4] = color;
+    State.grid[x][y+1] = color;
+    State.grid[x][y+2] = color;
+    State.grid[x][y+3] = color;
+    State.grid[x+1][y+4] = color;
+  }
+}
+
+//draw a 3x5 One, x,y is upper left corner
+void draw_Binary_One(uint8_t x, uint8_t y, uint16_t color){
+  if((x<22)&&(y<8)){
+    State.grid[x+1][y] = color;
+    State.grid[x+1][y+1] = color;
+    State.grid[x+1][y+2] = color;
+    State.grid[x+1][y+3] = color;
+    State.grid[x+1][y+4] = color;
+    State.grid[x+2][y+4] = color;
+    State.grid[x][y+4] = color;
+    State.grid[x][y+1] = color;
+  }
+}
+
+void draw_Binary_Time(uint16_t color){
+  draw_ES_IST(color);
+
+  if((State.Now.hour() & (1<<0))){
+    draw_Binary_One(21, 0, color);
+  }else{
+    draw_Binary_Zero(21, 0, color);
+  }
+  
+  if((State.Now.hour() & (1<<1))){
+    draw_Binary_One(17, 0, color);
+  }else{
+    draw_Binary_Zero(17, 0, color);
+  }
+  
+  if((State.Now.hour() & (1<<2))){
+    draw_Binary_One(13, 0, color);
+  }else{
+    draw_Binary_Zero(13, 0, color);
+  }
+  
+  if((State.Now.hour() & (1<<3))){
+    draw_Binary_One(9, 0, color);
+  }else{
+    draw_Binary_Zero(9, 0, color);
+  }
+
+  
+  if((State.Now.minute() & (1<<0))){
+    draw_Binary_One(21, 7, color);
+  }else{
+    draw_Binary_Zero(21, 7, color);
+  }
+  
+  if((State.Now.minute() & (1<<1))){
+    draw_Binary_One(17, 7, color);
+  }else{
+    draw_Binary_Zero(17, 7, color);
+  }
+  
+  if((State.Now.minute() & (1<<2))){
+    draw_Binary_One(13, 7, color);
+  }else{
+    draw_Binary_Zero(13, 7, color);
+  }
+  
+  if((State.Now.minute() & (1<<3))){
+    draw_Binary_One(9, 7, color);
+  }else{
+    draw_Binary_Zero(9, 7, color);
+  }
+  
+  if((State.Now.minute() & (1<<4))){
+    draw_Binary_One(5, 7, color);
+  }else{
+    draw_Binary_Zero(5, 7, color);
+  }
+  
+  if((State.Now.minute() & (1<<5))){
+    draw_Binary_One(1, 7, color);
+  }else{
+    draw_Binary_Zero(1, 7, color);
   }
 }
 
@@ -989,40 +1224,27 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   matrix.begin();
   matrix.setTextWrap(false);
-  matrix.setBrightness(16);
+  matrix.setBrightness(255);
   matrix.setTextColor(colors[1]);
 
   State.Mode = MODE_WORD_CLOCK;
-  //State.Mode = MODE_MARQUEE_TIME;
+  //State.Mode = MODE_WORD_CLOCK_SECONDS; //MODE_BINARY_CLOCK; //MODE_MARQUEE_TIME;
   State.last_Color = colors[1];
   State.Color_Mode = COLOR_MODE_MONO;
-  State.Color = colors[1];
+  State.Color = colors[5];
+
+  Serial.println("Wordclock");
+  Serial.print(State.Now.minute());
+  Serial.println(" Min");
+  Serial.print(State.Now.hour());
+  Serial.println(" hour");
 }
 
-uint16_t getColor(){
-  uint16_t color = 0;
 
-  switch(State.Color_Mode){
-    case COLOR_MODE_MONO:
-      color = State.Color;
-      break;
-
-     case COLOR_MODE_MIXED:
-      color = colors[rand()%MAX_COLORS];
-      break;
-
-    default: 
-      color = 0;
-
-  }
-
-
-  State.last_Color = color;
-  return color;
-}
 
 int x    = matrix.width();
 int pass = 0;
+uint8_t CountDownSeconds = 0;
 
 // the loop function runs over and over again forever
 void loop() {
@@ -1030,11 +1252,28 @@ void loop() {
   resetGrid();
 
   if(State.Mode == MODE_WORD_CLOCK){
-    draw_ES_IST(colors[1]);
-
-
-
+    draw_ES_IST(getColor());
+    drawWordClockMin(State.Now.minute(),false);
+    drawWordClockHour();
   }
+
+  if(State.Mode == MODE_WORD_CLOCK_SECONDS){
+    drawWordClockMin(State.Now.second(),true);
+  }
+
+  if(State.Mode == MODE_WORD_CLOCK_COUNT_DOWN){
+    if(State.Now.second() !=0){
+      CountDownSeconds = 60 - State.Now.second();
+    }else{
+      CountDownSeconds = 0;
+    }
+    drawWordClockMin(CountDownSeconds,true);
+  }
+
+  if(State.Mode == MODE_BINARY_CLOCK){
+    draw_Binary_Time(getColor());
+  }
+
   /* Lauftext*/
   if(State.Mode == MODE_MARQUEE_TIME){
     String dataString = "";
@@ -1045,7 +1284,7 @@ void loop() {
     dataString += String(State.Now.second());
     matrix.fillScreen(0);
     matrix.setCursor(x, 2);
-    //matrix.print(F("Emil"));
+    //matrix.print(F("Leon!"));
     matrix.print(dataString);
     if(--x < -48) {
       x = matrix.width();

@@ -1,3 +1,5 @@
+#ifndef _WORDCLOCK_H
+#define _WORDCLOCK_H
 #include <RTClib.h>
 
 #define WIDTH 24                // width of LED matirx
@@ -48,3 +50,5 @@ typedef struct
   uint16_t last_grid[WIDTH][HEIGHT] = {0};
 
 }stateType_t;
+
+#endif

@@ -21,12 +21,12 @@
 3  B  I  N  W  O  C  H  E  N  E  N  D  E  N  O  C  H  A  L  B  I  E  R  E
 4  S  T  U  N  D  E  N  U  L  L  A  U  H  R  S  P  Ä  T  E  R  U  N  D  U
 5  D  R  E  I  N  E  R  V  I  E  R  S  E  C  H  S  I  E  B  E  N  E  U  N
-6  F  Ü  N  F  N  A  C  H  T  Z  E  H  N  I  C  H  T  S  Z  W  E  I  S  T
+6  Q  F  Ü  N  F  A  C  H  T  Z  E  H  N  I  C  H  T  S  Z  W  E  I  S  T
 7  Z  U  N  D  E  L  F  Ü  N  F  Z  I  G  U  T  E  N  V  I  E  R  Z  I  G
 8  D  R  E  I  ß  I  G  Z  W  A  N  Z  I  G  Z  W  Ö  L  F  R  Ü  H  E  R
 9  I  M  I  N  U  T  E  N  I  X  T  A  G  E  N  B  I  S  K  A  F  F  E  E
 10 Z  U  M  O  R  G  E  N  I  E  J  A  V  O  R  M  I  T  T  A  G  R  A  D
-11 U  R  L  A  U  B  K  A  L  T  W  A  R  M  Ö  P  R  Ä  A  B  E  N  D  A
+11 U  R  L  A  U  B  K  A  L  T  W  A  R  M  I  P  R  Ä  A  B  E  N  D  A
 */
 
 #include "wordclocklayout.h"

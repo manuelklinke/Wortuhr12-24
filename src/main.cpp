@@ -595,30 +595,47 @@ uint8_t CountDownSeconds = 0;
 
 // the loop function runs over and over again forever
 void loop() {
+   uint8_t ActualMin = 0;
+   uint8_t ActualSec = 0;
+
   State.Now = RTC.now();
-  resetGrid();
+  
 
   if(State.Mode == MODE_WORD_CLOCK){
-    draw_ES_IST(getColor(), &State);
-    drawWordClockMin(State.Now.minute(),false);
-    drawWordClockHour();
+    if(ActualMin != State.Now.minute()){
+      resetGrid();
+      draw_ES_IST(getColor(), &State);
+      drawWordClockMin(State.Now.minute(),false);
+      drawWordClockHour();
+      ActualMin = State.Now.minute();
+    }
+    
   }
 
   if(State.Mode == MODE_WORD_CLOCK_SECONDS){
-    drawWordClockMin(State.Now.second(),true);
+    if(ActualSec != State.Now.second()){
+      drawWordClockMin(State.Now.second(),true);
+      ActualSec = State.Now.second();
+    }
   }
 
   if(State.Mode == MODE_WORD_CLOCK_COUNT_DOWN){
-    if(State.Now.second() !=0){
-      CountDownSeconds = 60 - State.Now.second();
-    }else{
-      CountDownSeconds = 0;
+    if(ActualSec != State.Now.second()){
+      if(State.Now.second() !=0){
+        CountDownSeconds = 60 - State.Now.second();
+      }else{
+        CountDownSeconds = 0;
+      }
+      drawWordClockMin(CountDownSeconds,true);
+      ActualSec = State.Now.second();
     }
-    drawWordClockMin(CountDownSeconds,true);
   }
 
   if(State.Mode == MODE_BINARY_CLOCK){
-    draw_Binary_Time(getColor());
+    if(ActualSec != State.Now.second()){
+      draw_Binary_Time(getColor());
+      ActualSec = State.Now.second();
+    }
   }
 
   /* Lauftext*/
@@ -639,7 +656,7 @@ void loop() {
       matrix.setTextColor(colors[pass]);
     }
     matrix.show();
-  delay(150);
+  //delay(150);
   }else{
     for(int i = 0; i < WIDTH; i++) {
       for(int j = 0; j < HEIGHT; j++) {
@@ -653,7 +670,7 @@ void loop() {
       }
     }
     matrix.show();
-  delay(50);
+  //delay(50);
   }
   
 

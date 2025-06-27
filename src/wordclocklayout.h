@@ -21,16 +21,16 @@
 /* V2
    0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
 0  E  S  B  I  S  T  E  I  N  Z  E  I  T  D  R  E  I  V  I  E  R  T  E  L
-1  E  L  F  Ü  N  F  Ü  R  N  E  U  N  A  C  H  T  S  K  A  F  F  E  E  R
-2  Z  W  E  I  N  S  E  C  H  S  I  E  B  E  N  E  I  N  E  Z  E  H  N  Ö
-3  V  O  R  W  O  C  H  E  N  E  N  D  E  N  O  C  H  A  L  B  I  E  R  E
+1  Z  W  Ö  L  F  Ü  N  F  Ü  R  N  E  U  N  A  C  H  T  E  L  F  V  O  R
+2  Z  W  E  I  N  S  E  C  H  S  I  E  B  E  N  E  I  N  E  Z  E  H  N  Y
+3  B  I  N  W  O  C  H  E  N  E  N  D  E  N  O  C  H  A  L  B  I  E  R  E
 4  S  T  U  N  D  E  N  U  L  L  A  U  H  R  S  P  Ä  T  E  R  U  N  D  U
 5  D  R  E  I  N  E  R  V  I  E  R  S  E  C  H  S  I  E  B  E  N  E  U  N
 6  F  Ü  N  F  N  A  C  H  T  Z  E  H  N  I  C  H  T  S  Z  W  E  I  S  T
 7  Z  U  N  D  E  L  F  Ü  N  F  Z  I  G  U  T  E  N  V  I  E  R  Z  I  G
 8  D  R  E  I  ß  I  G  Z  W  A  N  Z  I  G  Z  W  Ö  L  F  R  Ü  H  E  R
-9  I  M  I  N  U  T  E  N  I  X  T  A  G  E  N  B  I  S  T  J  A  M  I  R
-10 Z  U  M  O  R  G  E  N  I  E  V  O  R  M  I  T  T  A  G  R  A  D  I  R
+9  I  M  I  N  U  T  E  N  I  X  T  A  G  E  N  B  I  S  K  A  F  F  E  E
+10 Z  U  M  O  R  G  E  N  I  E  J  A  V  O  R  M  I  T  T  A  G  R  A  D
 11 U  R  L  A  U  B  K  A  L  T  W  A  R  M  Ö  P  R  Ä  A  B  E  N  D  A
 */
 
@@ -137,6 +137,28 @@ extern void draw_WENIG(uint16_t color, stateType_t *state);
 extern void draw_WENIGE(uint16_t color, stateType_t *state);
 #endif
 
+#ifdef LAYOUT2
+extern void draw_EIN1(uint16_t color, stateType_t *state);
+extern void draw_STEIN(uint16_t color, stateType_t *state);
+extern void draw_Std_EIN1(uint16_t color, stateType_t *state);
+extern void draw_Std_EIN2(uint16_t color, stateType_t *state);
+extern void draw_Std_EINE(uint16_t color, stateType_t *state);
+extern void draw_NACHT1(uint16_t color, stateType_t *state);
+extern void draw_NACHT2(uint16_t color, stateType_t *state);
+extern void draw_TAG1(uint16_t color, stateType_t *state);
+extern void draw_TAG2(uint16_t color, stateType_t *state);
+extern void draw_Nein1(uint16_t color, stateType_t *state);
+extern void draw_ZU(uint16_t color, stateType_t *state);
+extern void draw_BIN(uint16_t color, stateType_t *state);
+extern void draw_JA(uint16_t color, stateType_t *state);
+extern void draw_LAU(uint16_t color, stateType_t *state);
+extern void draw_NERV(uint16_t color, stateType_t *state);
+extern void draw_BIS(uint16_t color, stateType_t *state);
+extern void draw_NICHT(uint16_t color, stateType_t *state);
+extern void draw_NICHTS(uint16_t color, stateType_t *state);
+extern void draw_DA(uint16_t color, stateType_t *state);
+extern void draw_DU(uint16_t color, stateType_t *state);
+extern void draw_ZUM(uint16_t color, stateType_t *state);
 
-
+#endif
 #endif

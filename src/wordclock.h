@@ -3,7 +3,7 @@
 #define WIDTH 24                // width of LED matirx
 #define HEIGHT 12 
 
-#define LAYOUT1
+#define LAYOUT2
 
 #define BRIGHTNESS_DAY 128
 #define BRIGHTNESS_NIGHT 64

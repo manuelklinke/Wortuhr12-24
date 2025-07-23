@@ -77,6 +77,7 @@ extern void draw_Std_NEUN(uint16_t color, stateType_t *state);
 extern void draw_Std_ZEHN(uint16_t color, stateType_t *state);
 extern void draw_Std_ELF(uint16_t color, stateType_t *state);
 extern void draw_Std_ZWOELF(uint16_t color, stateType_t *state);
+extern void draw_Std_UND(uint16_t color, stateType_t *state);
 
 extern void draw_UHR1(uint16_t color, stateType_t *state);
 extern void draw_MORGEN(uint16_t color, stateType_t *state);

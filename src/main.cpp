@@ -62,6 +62,8 @@ const uint16_t colors[] = {
   matrix.Color(0, 255, 0),      // green 
   matrix.Color(0, 0, 255) };    // blue
 
+DateTime Now;
+
 static stateType_t State;
 
 
@@ -76,7 +78,7 @@ uint16_t getColor(){
      case COLOR_MODE_MIXED:
       color = colors[rand()%MAX_COLORS];
       if(color == State.last_Color){
-        color = colors[State.Now.second()%MAX_COLORS];
+        color = colors[Now.second()%MAX_COLORS];
       }
       break;
 
@@ -111,8 +113,6 @@ void drawWordClockMin(uint8_t min, bool useAsSeconds){
     if(Min == 1){
       if(useAsSeconds == false){
       draw_Min_EINE(getColor(), &State);
-      draw_MINUTE(getColor(), &State);
-      draw_NACH(getColor(), &State);
       }else{
         draw_Std_EINS(getColor(), &State);
       }
@@ -373,15 +373,14 @@ void drawWordClockMin(uint8_t min, bool useAsSeconds){
       }
       if(useAsSeconds == false){
         draw_MINUTEN(getColor(), &State);
-        draw_NACH(getColor(), &State);
       }
     }
   }
 }
 
 void drawWordClockHour(){
-  uint8_t h = State.Now.hour();
-  uint8_t Min = State.Now.minute();
+  uint8_t h = Now.hour();
+  uint8_t Min = Now.minute();
   if(h == 0){
     draw_Std_NULL(getColor(), &State);
   }
@@ -433,30 +432,30 @@ void drawWordClockHour(){
 
 void draw_daytime(){
   draw_ES_IST(getColor(), &State);
-  if(State.Now.hour()<= 4){
+  if(Now.hour()<= 4){
     draw_SPAET(getColor(), &State);
     draw_NACHTS(getColor(), &State);
   }
-  if((State.Now.hour()>4)&&(State.Now.hour()<= 9)){
+  if((Now.hour()>4)&&(Now.hour()<= 9)){
     draw_MORGEN(getColor(), &State);
   }
-  if((State.Now.hour()>9)&&(State.Now.hour()<= 11)){
+  if((Now.hour()>9)&&(Now.hour()<= 11)){
     draw_VORMITTAG(getColor(), &State);
   }
-  if((State.Now.hour()>11)&&(State.Now.hour()<= 14)){
+  if((Now.hour()>11)&&(Now.hour()<= 14)){
     draw_MITTAGS(getColor(), &State);
   }
-  if((State.Now.hour()>14)&&(State.Now.hour()<= 16)){
+  if((Now.hour()>14)&&(Now.hour()<= 16)){
     draw_NACH(getColor(), &State);
     draw_MITTAG(getColor(), &State);
   }
-  if((State.Now.hour()>16)&&(State.Now.hour()<= 19)){
+  if((Now.hour()>16)&&(Now.hour()<= 19)){
     draw_PRAEABEND(getColor(), &State);
   }
-  if((State.Now.hour()>19)&&(State.Now.hour()<= 22)){
+  if((Now.hour()>19)&&(Now.hour()<= 22)){
     draw_ABEND(getColor(), &State);
   }
-  if((State.Now.hour()>22)){
+  if((Now.hour()>22)){
     draw_NACHT(getColor(), &State);
   }
 }
@@ -499,62 +498,62 @@ void draw_Binary_One(uint8_t x, uint8_t y, uint16_t color){
 void draw_Binary_Time(uint16_t color){
   draw_ES_IST(color, &State);
 
-  if((State.Now.hour() & (1<<0))){
+  if((Now.hour() & (1<<0))){
     draw_Binary_One(21, 0, color);
   }else{
     draw_Binary_Zero(21, 0, color);
   }
   
-  if((State.Now.hour() & (1<<1))){
+  if((Now.hour() & (1<<1))){
     draw_Binary_One(17, 0, color);
   }else{
     draw_Binary_Zero(17, 0, color);
   }
   
-  if((State.Now.hour() & (1<<2))){
+  if((Now.hour() & (1<<2))){
     draw_Binary_One(13, 0, color);
   }else{
     draw_Binary_Zero(13, 0, color);
   }
   
-  if((State.Now.hour() & (1<<3))){
+  if((Now.hour() & (1<<3))){
     draw_Binary_One(9, 0, color);
   }else{
     draw_Binary_Zero(9, 0, color);
   }
 
   
-  if((State.Now.minute() & (1<<0))){
+  if((Now.minute() & (1<<0))){
     draw_Binary_One(21, 7, color);
   }else{
     draw_Binary_Zero(21, 7, color);
   }
   
-  if((State.Now.minute() & (1<<1))){
+  if((Now.minute() & (1<<1))){
     draw_Binary_One(17, 7, color);
   }else{
     draw_Binary_Zero(17, 7, color);
   }
   
-  if((State.Now.minute() & (1<<2))){
+  if((Now.minute() & (1<<2))){
     draw_Binary_One(13, 7, color);
   }else{
     draw_Binary_Zero(13, 7, color);
   }
   
-  if((State.Now.minute() & (1<<3))){
+  if((Now.minute() & (1<<3))){
     draw_Binary_One(9, 7, color);
   }else{
     draw_Binary_Zero(9, 7, color);
   }
   
-  if((State.Now.minute() & (1<<4))){
+  if((Now.minute() & (1<<4))){
     draw_Binary_One(5, 7, color);
   }else{
     draw_Binary_Zero(5, 7, color);
   }
   
-  if((State.Now.minute() & (1<<5))){
+  if((Now.minute() & (1<<5))){
     draw_Binary_One(1, 7, color);
   }else{
     draw_Binary_Zero(1, 7, color);
@@ -566,7 +565,7 @@ void setup() {
 
   Wire.begin();  // Begin I2C
   RTC.begin();   // begin clock
-  //RTC.adjust(DateTime(__DATE__, __TIME__));
+  RTC.adjust(DateTime(__DATE__, __TIME__));
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(LED_BUILTIN, OUTPUT);
   matrix.begin();
@@ -575,15 +574,15 @@ void setup() {
   matrix.setTextColor(colors[1]);
 
   State.Mode = MODE_WORD_CLOCK;
-  //State.Mode = MODE_WORD_CLOCK_SECONDS; //MODE_BINARY_CLOCK; //MODE_MARQUEE_TIME;
+  //State.Mode = MODE_WORD_CLOCK_SECONDS; //MODE_BINARY_CLOCK; //MODE_MARQUEE_TIME; //MODE_TIME_FOR_FACTS;
   State.last_Color = colors[1];
   State.Color_Mode = COLOR_MODE_MONO;
   State.Color = colors[5];
 
   Serial.println("Wordclock");
-  Serial.print(State.Now.minute());
+  Serial.print(Now.minute());
   Serial.println(" Min");
-  Serial.print(State.Now.hour());
+  Serial.print(Now.hour());
   Serial.println(" hour");
 }
 
@@ -598,54 +597,67 @@ void loop() {
    uint8_t ActualMin = 0;
    uint8_t ActualSec = 0;
 
-  State.Now = RTC.now();
+  Now = RTC.now();
   
 
   if(State.Mode == MODE_WORD_CLOCK){
-    if(ActualMin != State.Now.minute()){
+    if(ActualMin != Now.minute()){
       resetGrid();
       draw_ES_IST(getColor(), &State);
-      drawWordClockMin(State.Now.minute(),false);
       drawWordClockHour();
-      ActualMin = State.Now.minute();
+      draw_Std_UND(getColor(), &State);
+      drawWordClockMin(Now.minute(),false);
+      
+      ActualMin = Now.minute();
     }
     
   }
 
   if(State.Mode == MODE_WORD_CLOCK_SECONDS){
-    if(ActualSec != State.Now.second()){
-      drawWordClockMin(State.Now.second(),true);
-      ActualSec = State.Now.second();
+    if(ActualSec != Now.second()){
+      drawWordClockMin(Now.second(),true);
+      ActualSec = Now.second();
     }
   }
 
   if(State.Mode == MODE_WORD_CLOCK_COUNT_DOWN){
-    if(ActualSec != State.Now.second()){
-      if(State.Now.second() !=0){
-        CountDownSeconds = 60 - State.Now.second();
+    if(ActualSec != Now.second()){
+      if(Now.second() !=0){
+        CountDownSeconds = 60 - Now.second();
       }else{
         CountDownSeconds = 0;
       }
       drawWordClockMin(CountDownSeconds,true);
-      ActualSec = State.Now.second();
+      ActualSec = Now.second();
     }
   }
 
   if(State.Mode == MODE_BINARY_CLOCK){
-    if(ActualSec != State.Now.second()){
+    if(ActualSec != Now.second()){
       draw_Binary_Time(getColor());
-      ActualSec = State.Now.second();
+      ActualSec = Now.second();
     }
+  }
+
+  if(State.Mode == MODE_TIME_FOR_FACTS){
+      resetGrid();
+      draw_ES_IST(getColor(), &State);
+      draw_ZEIT(getColor(),&State);
+      draw_FUER(getColor(), &State);
+      draw_BIER(getColor(), &State);
+      
+    
+    
   }
 
   /* Lauftext*/
   if(State.Mode == MODE_MARQUEE_TIME){
     String dataString = "";
-    dataString += String(State.Now.hour());
+    dataString += String(Now.hour());
     dataString += ":";
-    dataString += String(State.Now.minute());
+    dataString += String(Now.minute());
     dataString += ":";
-    dataString += String(State.Now.second());
+    dataString += String(Now.second());
     matrix.fillScreen(0);
     matrix.setCursor(x, 2);
     //matrix.print(F("Leon!"));

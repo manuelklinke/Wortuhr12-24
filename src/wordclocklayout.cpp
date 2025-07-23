@@ -661,7 +661,7 @@ void draw_EIN1(uint16_t color, stateType_t *state){
 void draw_STEIN(uint16_t color, stateType_t *state){
   state->grid[4][5] = color;
   state->grid[5][5] = color;
-  draw_EIN1(color,state);
+  draw_EIN1(color, state);
 }
 
 void draw_Std_NULL(uint16_t color, stateType_t *state){
@@ -671,14 +671,14 @@ void draw_Std_NULL(uint16_t color, stateType_t *state){
   state->grid[9][4] = color;
 }
 
-void draw_Std_EIN1(uint16_t color, stateType_t *state){
+void draw_Std_EIN(uint16_t color, stateType_t *state){
   state->grid[2][2] = color;
   state->grid[3][2] = color;
   state->grid[4][2] = color;
 }
 
 void draw_Std_EINS(uint16_t color, stateType_t *state){
-  draw_Std_EIN1(color, state);
+  draw_Std_EIN(color, state);
   state->grid[5][2] = color;
 }
 
@@ -753,10 +753,10 @@ void draw_Std_ACHT(uint16_t color, stateType_t *state){
 }
 
 void draw_Std_NEUN(uint16_t color, stateType_t *state){
-  state->grid[8][1] = color;
-  state->grid[9][1] = color;
   state->grid[10][1] = color;
   state->grid[11][1] = color;
+  state->grid[12][1] = color;
+  state->grid[13][1] = color;
 }
 
 void draw_Std_ZEHN(uint16_t color, stateType_t *state){
@@ -780,6 +780,11 @@ void draw_Std_ZWOELF(uint16_t color, stateType_t *state){
   state->grid[4][1] = color;
 }
 
+void draw_Std_UND(uint16_t color, stateType_t *state){
+  state->grid[20][4] = color;
+  state->grid[21][4] = color;
+  state->grid[22][4] = color;
+}
 
 void draw_VOR(uint16_t color, stateType_t *state){
   state->grid[21][1] = color;

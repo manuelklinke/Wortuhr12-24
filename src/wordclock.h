@@ -36,9 +36,11 @@
 
 #define MAX_COLORS 7
 
+
+
 typedef struct 
 {
-  DateTime Now;
+  
   int Mode;
   int Word_Clock_Mode;
   int Color_Mode;

@@ -722,10 +722,10 @@ void draw_VIERTEL(uint16_t color, stateType_t *state){
 }
 
 void draw_Std_FUENF(uint16_t color, stateType_t *state){
-  state->grid[2][1] = color;
-  state->grid[3][1] = color;
   state->grid[4][1] = color;
   state->grid[5][1] = color;
+  state->grid[6][1] = color;
+  state->grid[7][1] = color;
 }
 
 void draw_Std_SECHS(uint16_t color, stateType_t *state){
@@ -746,10 +746,10 @@ void draw_Std_SIEBEN(uint16_t color, stateType_t *state){
 }
 
 void draw_Std_ACHT(uint16_t color, stateType_t *state){
-  state->grid[12][1] = color;
-  state->grid[13][1] = color;
   state->grid[14][1] = color;
   state->grid[15][1] = color;
+  state->grid[16][1] = color;
+  state->grid[17][1] = color;
 }
 
 void draw_Std_NEUN(uint16_t color, stateType_t *state){
@@ -767,9 +767,9 @@ void draw_Std_ZEHN(uint16_t color, stateType_t *state){
 }
 
 void draw_Std_ELF(uint16_t color, stateType_t *state){
-  state->grid[0][1] = color;
-  state->grid[1][1] = color;
-  state->grid[2][1] = color;
+  state->grid[18][1] = color;
+  state->grid[19][1] = color;
+  state->grid[20][1] = color;
 }
 
 void draw_Std_ZWOELF(uint16_t color, stateType_t *state){
@@ -909,6 +909,7 @@ void draw_Min_ZWOELF(uint16_t color, stateType_t *state){
   state->grid[15][8] = color;
   state->grid[16][8] = color;
   state->grid[17][8] = color;
+  state->grid[18][8] = color;
 }
 
 void draw_Min_UND(uint16_t color, stateType_t *state){

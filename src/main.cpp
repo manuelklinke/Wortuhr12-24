@@ -66,6 +66,9 @@ DateTime Now;
 
 static stateType_t State;
 
+int x = 0;
+int pass = 0;
+uint8_t CountDownSeconds = 0;
 
 uint16_t getColor(){
   uint16_t color = 0;
@@ -113,6 +116,7 @@ void drawWordClockMin(uint8_t min, bool useAsSeconds){
     if(Min == 1){
       if(useAsSeconds == false){
       draw_Min_EINE(getColor(), &State);
+      draw_MINUTE(getColor(), &State);
       }else{
         draw_Std_EINS(getColor(), &State);
       }
@@ -379,17 +383,15 @@ void drawWordClockMin(uint8_t min, bool useAsSeconds){
 }
 
 void drawWordClockHour(){
-  uint8_t h = Now.hour();
+  uint8_t h = Now.twelveHour();
   uint8_t Min = Now.minute();
   if(h == 0){
     draw_Std_NULL(getColor(), &State);
   }
   if(h == 1){
-    if(Min != 0){
-      draw_Std_EINS(getColor(), &State);
-    }else{
-      draw_Std_EIN(getColor(), &State);
-    }
+    
+    draw_Std_EIN(getColor(), &State);
+    
   }
   if(h == 2){
     draw_Std_ZWEI(getColor(), &State);
@@ -562,10 +564,11 @@ void draw_Binary_Time(uint16_t color){
 
 /// the setup function runs once when you press reset or power the board
 void setup() {
-
+  x    = matrix.width();
+  Serial.begin(115200);
   Wire.begin();  // Begin I2C
   RTC.begin();   // begin clock
-  RTC.adjust(DateTime(__DATE__, __TIME__));
+  //RTC.adjust(DateTime(__DATE__, __TIME__));
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(LED_BUILTIN, OUTPUT);
   matrix.begin();
@@ -579,18 +582,11 @@ void setup() {
   State.Color_Mode = COLOR_MODE_MONO;
   State.Color = colors[5];
 
-  Serial.println("Wordclock");
-  Serial.print(Now.minute());
-  Serial.println(" Min");
-  Serial.print(Now.hour());
-  Serial.println(" hour");
+  
 }
 
 
 
-int x    = matrix.width();
-int pass = 0;
-uint8_t CountDownSeconds = 0;
 
 // the loop function runs over and over again forever
 void loop() {
@@ -682,17 +678,14 @@ void loop() {
       }
     }
     matrix.show();
-  //delay(50);
-  }
-  
 
-/*
-  digitalWrite(LED_BUILTIN, HIGH);   // Arduino: turn the LED on (HIGH)
-                                     // D1 Mini: turns the LED *off*
-  delay(1000);                       // wait for a second
-  digitalWrite(LED_BUILTIN, LOW);    // Arduino: turn the LED off (LOW)
-                                     // D1 Mini: turns the LED *on*
-  delay(1000);                      // wait for a second
-*/
+    Serial.println("Wordclock");
+    Serial.print(Now.minute());
+    Serial.println(" Min");
+    Serial.print(Now.hour());
+    Serial.println(" hour");
+
+    delay(100);
+  }
 
 }

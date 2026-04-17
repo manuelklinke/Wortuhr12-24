@@ -42,7 +42,7 @@
 
 
 #define NEOPIXEL_PIN D4
-
+#define MAX_FACTS 8
 
 RTC_DS1307 RTC; // Establish clock object
 
@@ -485,6 +485,7 @@ void draw_Binary_Zero(uint8_t x, uint8_t y, uint16_t color){
 
 //draw a 3x5 One, x,y is upper left corner
 void draw_Binary_One(uint8_t x, uint8_t y, uint16_t color){
+
   if((x<22)&&(y<8)){
     State.grid[x+1][y] = color;
     State.grid[x+1][y+1] = color;
@@ -498,6 +499,7 @@ void draw_Binary_One(uint8_t x, uint8_t y, uint16_t color){
 }
 
 void draw_Binary_Time(uint16_t color){
+  resetGrid();
   draw_ES_IST(color, &State);
 
   if((Now.hour() & (1<<0))){
@@ -636,13 +638,63 @@ void loop() {
   }
 
   if(State.Mode == MODE_TIME_FOR_FACTS){
-      resetGrid();
-      draw_ES_IST(getColor(), &State);
-      draw_ZEIT(getColor(),&State);
-      draw_FUER(getColor(), &State);
-      draw_BIER(getColor(), &State);
       
-    
+      
+      if(ActualMin != Now.minute()){
+        resetGrid();
+      switch (random(MAX_FACTS))
+      {
+      case 1:
+        draw_ES_IST(getColor(), &State);
+        draw_ZEIT(getColor(),&State);
+        draw_FUER(getColor(), &State);
+        draw_BIER(getColor(), &State);
+        break;
+      case 2:
+        draw_ES_IST(getColor(), &State);
+        draw_ZEIT(getColor(),&State);
+        draw_FUER(getColor(), &State);
+        draw_URLAUB(getColor(), &State);
+        break;
+      case 3:
+        draw_ES_IST(getColor(), &State);
+        draw_ZEIT(getColor(),&State);
+        draw_FUER(getColor(), &State);
+        draw_MIMIMI(getColor(), &State);
+        break;
+      case 4:
+        draw_ES_IST(getColor(), &State);
+        draw_ZEIT(getColor(),&State);
+        draw_FUER(getColor(), &State);
+        draw_WEIN(getColor(), &State);
+        break;
+      case 5:
+        draw_ES_IST(getColor(), &State);
+        draw_ZEIT(getColor(),&State);
+        draw_FUER(getColor(), &State);
+        draw_EIS(getColor(), &State);
+        break;
+      case 6:
+        draw_ES_IST(getColor(), &State);
+        draw_ZEIT(getColor(),&State);
+        draw_FUER(getColor(), &State);
+        draw_KAFFEE(getColor(), &State);
+        break;
+      case 7:
+        draw_NERV(getColor(), &State);
+        draw_NICHT(getColor(), &State);
+        break;
+      case 8:
+        draw_ES_IST(getColor(), &State);
+        draw_ZEIT(getColor(),&State);
+        draw_FUER(getColor(), &State);
+        draw_NIX(getColor(), &State);
+        break;
+      default:
+        break;
+      }
+      ActualMin = Now.minute();
+      }
     
   }
 

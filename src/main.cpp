@@ -11,6 +11,8 @@
 #include "secrets.h"
 
 
+#include "gameoflife.h"
+#include "matrixrain.h"
 #include "wordclocklayout.h"
 
 /* V2
@@ -83,8 +85,12 @@ int x = 0;
 int pass = 0;
 uint8_t CountDownSeconds = 0;
 bool ForceDisplayUpdate = true;
+bool WebServerStarted = false;
+bool LastRtcSetOk = false;
 unsigned long LastWifiReconnectAttempt = 0;
 unsigned long LastMqttReconnectAttempt = 0;
+unsigned long LastSerialStatus = 0;
+unsigned long LastMarqueeStep = 0;
 
 bool isValidMode(uint8_t mode){
   switch(mode){
@@ -92,8 +98,12 @@ bool isValidMode(uint8_t mode){
     case MODE_WORD_CLOCK_SECONDS:
     case MODE_WORD_CLOCK_COUNT_DOWN:
     case MODE_WORD_CLOCK_DAYTIME:
+    case MODE_WORD_CLOCK_EXACT_DAYTIME:
     case MODE_MARQUEE_TIME:
     case MODE_BINARY_CLOCK:
+    case MODE_GAME_OF_LIFE:
+    case MODE_GAME_OF_LIFE_AGING:
+    case MODE_MATRIX_RAIN:
     case MODE_TIME_FOR_FACTS:
     case MODE_MARQUEE_TEXT:
       return true;
@@ -210,8 +220,12 @@ const char* modeToName(int mode){
     case MODE_WORD_CLOCK_SECONDS: return "seconds";
     case MODE_WORD_CLOCK_COUNT_DOWN: return "countdown";
     case MODE_WORD_CLOCK_DAYTIME: return "daytime";
+    case MODE_WORD_CLOCK_EXACT_DAYTIME: return "exact_daytime";
     case MODE_MARQUEE_TIME: return "marquee_time";
     case MODE_BINARY_CLOCK: return "binary";
+    case MODE_GAME_OF_LIFE: return "game_of_life";
+    case MODE_GAME_OF_LIFE_AGING: return "game_of_life_aging";
+    case MODE_MATRIX_RAIN: return "matrix_rain";
     case MODE_TIME_FOR_FACTS: return "facts";
     case MODE_MARQUEE_TEXT: return "marquee_text";
     default: return "unknown";
@@ -223,8 +237,12 @@ int modeFromName(const String &name){
   if(name == "seconds") return MODE_WORD_CLOCK_SECONDS;
   if(name == "countdown") return MODE_WORD_CLOCK_COUNT_DOWN;
   if(name == "daytime") return MODE_WORD_CLOCK_DAYTIME;
+  if(name == "exact_daytime") return MODE_WORD_CLOCK_EXACT_DAYTIME;
   if(name == "marquee_time") return MODE_MARQUEE_TIME;
   if(name == "binary") return MODE_BINARY_CLOCK;
+  if(name == "game_of_life") return MODE_GAME_OF_LIFE;
+  if(name == "game_of_life_aging") return MODE_GAME_OF_LIFE_AGING;
+  if(name == "matrix_rain") return MODE_MATRIX_RAIN;
   if(name == "facts") return MODE_TIME_FOR_FACTS;
   if(name == "marquee_text") return MODE_MARQUEE_TEXT;
   return State.Mode;
@@ -258,17 +276,51 @@ void setColorModeFromName(const String &name){
   }
 }
 
+String currentDateTimeValue();
+
 bool parseDateTime(const String &value, DateTime *dateTime){
   int year, month, day, hour, minute, second;
   if(sscanf(value.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second) == 6){
+    if(year < 2000 || month < 1 || month > 12 || day < 1 || day > 31 ||
+       hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59){
+      return false;
+    }
     *dateTime = DateTime(year, month, day, hour, minute, second);
     return true;
   }
   if(sscanf(value.c_str(), "%d-%d-%dT%d:%d", &year, &month, &day, &hour, &minute) == 5){
+    if(year < 2000 || month < 1 || month > 12 || day < 1 || day > 31 ||
+       hour < 0 || hour > 23 || minute < 0 || minute > 59){
+      return false;
+    }
     *dateTime = DateTime(year, month, day, hour, minute, 0);
     return true;
   }
   return false;
+}
+
+bool setRtcTime(const String &value){
+  DateTime newTime;
+  if(!parseDateTime(value, &newTime)){
+    Serial.print(F("[rtc] invalid datetime: "));
+    Serial.println(value);
+    LastRtcSetOk = false;
+    return false;
+  }
+
+  RTC.adjust(newTime);
+  delay(10);
+  Now = RTC.now();
+  int32_t rtcDiff = (int32_t)Now.unixtime() - (int32_t)newTime.unixtime();
+  LastRtcSetOk = abs(rtcDiff) <= 2;
+
+  Serial.print(F("[rtc] set requested: "));
+  Serial.print(value);
+  Serial.print(F(", readback: "));
+  Serial.print(currentDateTimeValue());
+  Serial.print(F(", status: "));
+  Serial.println(LastRtcSetOk ? F("ok") : F("failed"));
+  return LastRtcSetOk;
 }
 
 String currentDateTimeValue(){
@@ -318,7 +370,7 @@ void resetGrid(){
 
 
 
-void drawWordClockMin(uint8_t min, bool useAsSeconds){
+void drawWordClockMin(uint8_t min, bool useAsSeconds, bool drawMinuteWord = true){
   uint8_t Min = min;
   if(useAsSeconds == true){
     if(Min == 0){
@@ -328,8 +380,10 @@ void drawWordClockMin(uint8_t min, bool useAsSeconds){
   if(Min != 0){
     if(Min == 1){
       if(useAsSeconds == false){
-      draw_Min_EINE(getColor(), &State);
-      draw_MINUTE(getColor(), &State);
+        draw_Min_EINE(getColor(), &State);
+        if(drawMinuteWord){
+          draw_MINUTE(getColor(), &State);
+        }
       }else{
         draw_Std_EINS(getColor(), &State);
       }
@@ -588,11 +642,45 @@ void drawWordClockMin(uint8_t min, bool useAsSeconds){
         draw_Min_UND(getColor(), &State);
         draw_Min_FUENFZIG(getColor(), &State);
       }
-      if(useAsSeconds == false){
+      if(useAsSeconds == false && drawMinuteWord){
         draw_MINUTEN(getColor(), &State);
       }
     }
   }
+}
+
+void drawWordClockHour();
+
+void drawExactDaypart(){
+  uint8_t hour = Now.hour();
+
+  draw_AM(getColor(), &State);
+  if(hour >= 5 && hour <= 9){
+    draw_MORGEN(getColor(), &State);
+  }else if(hour >= 10 && hour <= 11){
+    draw_VORMITTAG(getColor(), &State);
+  }else if(hour >= 12 && hour <= 13){
+    draw_MITTAG(getColor(), &State);
+  }else if(hour >= 14 && hour <= 16){
+#ifdef LAYOUT2
+    draw_TAG1(getColor(), &State);
+#else
+    draw_TAG(getColor(), &State);
+#endif
+  }else if(hour >= 17 && hour <= 19){
+    draw_PRAEABEND(getColor(), &State);
+  }else{
+    draw_ABEND(getColor(), &State);
+  }
+}
+
+void drawWordClockExactDaytime(){
+  draw_ES_IST(getColor(), &State);
+  drawWordClockHour();
+  if(Now.minute() != 0){
+    drawWordClockMin(Now.minute(), false, false);
+  }
+  drawExactDaypart();
 }
 
 void drawWordClockHour(){
@@ -793,6 +881,7 @@ void applyDisplaySettings(){
   matrix.setTextColor(State.Color);
   ForceDisplayUpdate = true;
   x = matrix.width();
+  LastMarqueeStep = 0;
 }
 
 String selectedAttr(const char *value, const char *current){
@@ -840,6 +929,8 @@ String buildSettingsPage(){
   html += WiFi.localIP().toString();
   html += F(" | MQTT: ");
   html += mqttClient.connected() ? F("verbunden") : F("nicht verbunden");
+  html += F(" | RTC setzen: ");
+  html += LastRtcSetOk ? F("ok") : F("nicht bestaetigt");
   html += F("</p><form method=\"post\" action=\"/settings\"><div class=\"row\"><label>Modus<select name=\"mode\">");
   html += F("<option value=\"word_clock\"");
   html += selectedAttr("word_clock", modeName);
@@ -849,13 +940,21 @@ String buildSettingsPage(){
   html += selectedAttr("countdown", modeName);
   html += F(">Countdown</option><option value=\"daytime\"");
   html += selectedAttr("daytime", modeName);
-  html += F(">Tageszeit</option><option value=\"marquee_time\"");
+  html += F(">Tageszeit</option><option value=\"exact_daytime\"");
+  html += selectedAttr("exact_daytime", modeName);
+  html += F(">Uhrzeit mit Tageszeit</option><option value=\"marquee_time\"");
   html += selectedAttr("marquee_time", modeName);
   html += F(">Lauftext Uhrzeit</option><option value=\"marquee_text\"");
   html += selectedAttr("marquee_text", modeName);
   html += F(">Freier Lauftext</option><option value=\"binary\"");
   html += selectedAttr("binary", modeName);
-  html += F(">Binaeruhr</option><option value=\"facts\"");
+  html += F(">Binaeruhr</option><option value=\"game_of_life\"");
+  html += selectedAttr("game_of_life", modeName);
+  html += F(">Game of Life</option><option value=\"game_of_life_aging\"");
+  html += selectedAttr("game_of_life_aging", modeName);
+  html += F(">Game of Life Aging</option><option value=\"matrix_rain\"");
+  html += selectedAttr("matrix_rain", modeName);
+  html += F(">Matrix-Regen</option><option value=\"facts\"");
   html += selectedAttr("facts", modeName);
   html += F(">Sprueche</option></select></label>");
   html += F("<label>Farbmodus<select name=\"color_mode\"><option value=\"mono\"");
@@ -874,9 +973,10 @@ String buildSettingsPage(){
   html += F("\"></label><label>Helligkeit<input type=\"range\" min=\"1\" max=\"255\" name=\"brightness\" value=\"");
   html += String(State.Brightness);
   html += F("\"></label></div>");
-  html += F("<label>Uhrzeit setzen<input type=\"datetime-local\" step=\"1\" name=\"time\" value=\"");
+  html += F("<label>Uhrzeit<input type=\"datetime-local\" step=\"1\" name=\"time\" value=\"");
   html += currentDateTimeValue();
-  html += F("\"></label><label>Freier Lauftext<textarea name=\"text\" maxlength=\"95\" rows=\"3\">");
+  html += F("\"></label><label><input type=\"checkbox\" name=\"set_time\" value=\"1\"> RTC mit dieser Uhrzeit setzen</label>");
+  html += F("<label>Freier Lauftext<textarea name=\"text\" maxlength=\"95\" rows=\"3\">");
   html += State.Marquee_Text;
   html += F("</textarea></label><button type=\"submit\">Uebernehmen und speichern</button></form></main></body></html>");
   return html;
@@ -920,12 +1020,8 @@ void handleSettingsPost(){
   if(webServer.hasArg("text")){
     webServer.arg("text").toCharArray(State.Marquee_Text, sizeof(State.Marquee_Text));
   }
-  if(webServer.hasArg("time") && webServer.arg("time").length() > 0){
-    DateTime newTime;
-    if(parseDateTime(webServer.arg("time"), &newTime)){
-      RTC.adjust(newTime);
-      Now = RTC.now();
-    }
+  if(webServer.hasArg("set_time") && webServer.hasArg("time") && webServer.arg("time").length() > 0){
+    setRtcTime(webServer.arg("time"));
   }
 
   applyDisplaySettings();
@@ -949,11 +1045,48 @@ void setupWebServer(){
     webServer.send(200, "text/plain", "saved");
   });
   webServer.begin();
+  WebServerStarted = true;
+}
+
+void printSerialStatus(){
+  if(LastSerialStatus != 0 && millis() - LastSerialStatus < 5000){
+    return;
+  }
+  LastSerialStatus = millis();
+
+  Serial.println(F("[wortuhr] status"));
+  Serial.print(F("  rtc: "));
+  Serial.println(currentDateTimeValue());
+  Serial.print(F("  rtc_set: "));
+  Serial.println(LastRtcSetOk ? F("ok") : F("not confirmed"));
+  Serial.print(F("  mode: "));
+  Serial.print(modeToName(State.Mode));
+  Serial.print(F(", wordclock: "));
+  Serial.println(State.Word_Clock_Mode);
+  Serial.print(F("  color: "));
+  Serial.print(colorToHex(State.Color));
+  Serial.print(F(", color_mode: "));
+  Serial.print(colorModeToName());
+  Serial.print(F(", brightness: "));
+  Serial.println(State.Brightness);
+  Serial.print(F("  wifi: "));
+  Serial.print(WiFi.status() == WL_CONNECTED ? F("connected") : F("not connected"));
+  Serial.print(F(", ip: "));
+  Serial.println(WiFi.localIP());
+  Serial.print(F("  webserver: "));
+  Serial.println(WebServerStarted ? F("running on port 80") : F("stopped"));
+  Serial.print(F("  mqtt: "));
+  if(strlen(MQTT_HOST) == 0){
+    Serial.println(F("disabled"));
+  }else{
+    Serial.println(mqttClient.connected() ? F("connected") : F("not connected"));
+  }
 }
 
 void handleMqttMessage(char* topic, byte* payload, unsigned int length){
   char message[128];
-  unsigned int copyLength = min(length, sizeof(message) - 1);
+  unsigned int maxCopyLength = sizeof(message) - 1;
+  unsigned int copyLength = length < maxCopyLength ? length : maxCopyLength;
   memcpy(message, payload, copyLength);
   message[copyLength] = '\0';
   String value = String(message);
@@ -978,11 +1111,7 @@ void handleMqttMessage(char* topic, byte* payload, unsigned int length){
     State.Mode = MODE_MARQUEE_TEXT;
     shouldSave = true;
   }else if(topicName.endsWith("/time/set")){
-    DateTime newTime;
-    if(parseDateTime(value, &newTime)){
-      RTC.adjust(newTime);
-      Now = RTC.now();
-    }
+    setRtcTime(value);
   }else if(topicName.endsWith("/save") && value == "1"){
     shouldSave = true;
   }else if(topicName.endsWith("/reboot") && value == "1"){
@@ -1040,6 +1169,7 @@ void handleNetwork(){
 void setup() {
   x    = matrix.width();
   Serial.begin(115200);
+  randomSeed(analogRead(A0) ^ micros());
   Wire.begin();  // Begin I2C
   RTC.begin();   // begin clock
   //RTC.adjust(DateTime(__DATE__, __TIME__));
@@ -1081,6 +1211,12 @@ void loop() {
     ActualMin = 60;
     ActualSec = 60;
     resetGrid();
+    if(State.Mode == MODE_GAME_OF_LIFE || State.Mode == MODE_GAME_OF_LIFE_AGING){
+      seedGameOfLife(&State);
+    }
+    if(State.Mode == MODE_MATRIX_RAIN){
+      initMatrixRain(&State);
+    }
     ForceDisplayUpdate = false;
   }
   
@@ -1090,8 +1226,10 @@ void loop() {
       resetGrid();
       draw_ES_IST(getColor(), &State);
       drawWordClockHour();
-      draw_Std_UND(getColor(), &State);
-      drawWordClockMin(Now.minute(),false);
+      if(Now.minute() != 0){
+        draw_Std_UND(getColor(), &State);
+        drawWordClockMin(Now.minute(),false);
+      }
       
       ActualMin = Now.minute();
     }
@@ -1102,6 +1240,14 @@ void loop() {
     if(ActualMin != Now.minute()){
       resetGrid();
       draw_daytime();
+      ActualMin = Now.minute();
+    }
+  }
+
+  if(State.Mode == MODE_WORD_CLOCK_EXACT_DAYTIME){
+    if(ActualMin != Now.minute()){
+      resetGrid();
+      drawWordClockExactDaytime();
       ActualMin = Now.minute();
     }
   }
@@ -1132,6 +1278,18 @@ void loop() {
       draw_Binary_Time(getColor());
       ActualSec = Now.second();
     }
+  }
+
+  if(State.Mode == MODE_GAME_OF_LIFE){
+    updateGameOfLife(&State, &matrix, false);
+  }
+
+  if(State.Mode == MODE_GAME_OF_LIFE_AGING){
+    updateGameOfLife(&State, &matrix, true);
+  }
+
+  if(State.Mode == MODE_MATRIX_RAIN){
+    updateMatrixRain(&State, &matrix);
   }
 
   if(State.Mode == MODE_TIME_FOR_FACTS){
@@ -1246,10 +1404,13 @@ void loop() {
     matrix.setCursor(x, 2);
     //matrix.print(F("Leon!"));
     matrix.print(dataString);
-    if(--x < -(int)(dataString.length() * 6)) {
-      x = matrix.width();
-      if(++pass >= 7) pass = 0;
-      matrix.setTextColor(colors[pass]);
+    if(millis() - LastMarqueeStep >= 500){
+      LastMarqueeStep = millis();
+      if(--x < -(int)(dataString.length() * 6)) {
+        x = matrix.width();
+        if(++pass >= MAX_COLORS) pass = 0;
+        matrix.setTextColor(colors[pass]);
+      }
     }
     matrix.show();
   //delay(150);
@@ -1267,13 +1428,8 @@ void loop() {
     }
     matrix.show();
 
-    Serial.println("Wordclock");
-    Serial.print(Now.minute());
-    Serial.println(" Min");
-    Serial.print(Now.hour());
-    Serial.println(" hour");
-
     delay(100);
   }
 
+  printSerialStatus();
 }

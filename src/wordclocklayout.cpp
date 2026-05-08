@@ -1283,10 +1283,10 @@ void draw_BIS(uint16_t color, stateType_t *state){
 }
 
 void draw_NOCH(uint16_t color, stateType_t *state){
+  state->grid[13][3] = color;
   state->grid[14][3] = color;
   state->grid[15][3] = color;
   state->grid[16][3] = color;
-  state->grid[17][3] = color;
 }
 
 void draw_NICHT(uint16_t color, stateType_t *state){

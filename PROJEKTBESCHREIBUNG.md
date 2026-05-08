@@ -79,6 +79,14 @@ Tageszeit-Anzeige in Worten. Vorhandene Wortbausteine deuten auf Ausgaben wie:
 
 Der Modus ist in der Hauptschleife eingebunden. Für `LAYOUT2` werden passende vorhandene Wortfunktionen verwendet. `PRAEABEND` ist als augenzwinkernde Anspielung auf The Big Bang Theory vorgesehen.
 
+### `MODE_WORD_CLOCK_EXACT_DAYTIME`
+
+Wortuhr-Anzeige mit genauer Stunde, genauer Minute und Tageszeit-Zusatz. Beispiel:
+
+`ES IST EIN UHR FUENF UND ZWANZIG IM MITTAG`
+
+Die Tageszeit wird aus der Stunde abgeleitet: Morgen, Vormittag, Mittag, Tag, Präabend oder Abend. Im aktuellen Matrixlayout ist für den Zusatz das Wort `IM` vorhanden; die bestehende Zeichenfunktion heißt historisch `draw_AM`.
+
 ### `MODE_MARQUEE_TIME`
 
 Digitale Uhrzeit als Lauftext. Die Zeit wird als Text im Format `Stunde:Minute:Sekunde` über die Matrix geschoben.
@@ -97,11 +105,15 @@ Vorgesehener Modus für eine Uhrzeitdarstellung über Widerstands-Farbcodes. Die
 
 ### `MODE_GAME_OF_LIFE`
 
-Vorgesehener Animationsmodus für Conway's Game of Life.
+Animationsmodus für Conway's Game of Life. Lebende Zellen werden in der ausgewählten Anzeigefarbe dargestellt.
+
+### `MODE_GAME_OF_LIFE_AGING`
+
+Variante von Conway's Game of Life mit alternden Pixeln. Lebende Zellen ändern mit ihrem Alter die Farbe von rot über gelb und grün nach blau.
 
 ### `MODE_MATRIX_RAIN`
 
-Vorgesehener Animationsmodus für einen Matrix-Regen-Effekt.
+Animationsmodus für einen Matrix-artigen Regeneffekt. Pro Spalte fällt eine Kette aus Pixeln nach unten. Das erste Zeichen ist am hellsten, das zweite deutlich dunkler, danach blendet die Kette stufenweise aus. Kettenlänge, Spaltenreihenfolge und Starthelligkeit variieren zufällig.
 
 ### `MODE_TEMPERATURE`
 
@@ -281,6 +293,9 @@ Bereits umgesetzt oder teilweise umgesetzt:
 - freier Lauftext
 - zufällige Sprüche im `TIME_FOR_FACTS`-Modus
 - Tageszeitmodus
+- Game of Life
+- Game of Life Aging
+- Matrix-Regen
 - HTML5-Weboberfläche
 - MQTT-Grundinterface
 - EEPROM-Persistenz
@@ -293,8 +308,6 @@ Noch offen oder als Idee vorbereitet:
 - Temperaturanzeige
 - Temperaturbewertung
 - besondere Ereignisse
-- Game of Life
-- Matrix-Rain
 - Widerstands-Farbcodes
 - WLAN-Konfiguration per Access Point
 - optional NTP-Zeitsynchronisation

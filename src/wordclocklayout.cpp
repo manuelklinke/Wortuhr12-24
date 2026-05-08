@@ -1166,6 +1166,20 @@ void draw_NEIN1(uint16_t color, stateType_t *state){
   state->grid[17][2] = color;
 }
 
+void draw_STUNDE(uint16_t color, stateType_t *state){
+  state->grid[0][4] = color;
+  state->grid[1][4] = color;
+  state->grid[2][4] = color;
+  state->grid[3][4] = color;
+  state->grid[4][4] = color;
+  state->grid[5][4] = color;
+}
+
+void draw_STUNDEN(uint16_t color, stateType_t *state){
+  draw_STUNDE(color, state);
+  state->grid[6][4] = color;
+}
+
 void draw_GRAD(uint16_t color, stateType_t *state){
   state->grid[20][10] = color;
   state->grid[21][10] = color;
@@ -1266,6 +1280,13 @@ void draw_BIS(uint16_t color, stateType_t *state){
   state->grid[15][9] = color;
   state->grid[16][9] = color;
   state->grid[17][9] = color;
+}
+
+void draw_NOCH(uint16_t color, stateType_t *state){
+  state->grid[14][3] = color;
+  state->grid[15][3] = color;
+  state->grid[16][3] = color;
+  state->grid[17][3] = color;
 }
 
 void draw_NICHT(uint16_t color, stateType_t *state){

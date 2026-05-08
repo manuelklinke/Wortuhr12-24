@@ -23,6 +23,7 @@
 #define MODE_RATE_TEMPERATURE 10
 #define MODE_TIME_FOR_FACTS 11
 #define MODE_DISPLAY_SPECIAL_EVENTS 12
+#define MODE_MARQUEE_TEXT 13
 
 
 #define WORD_CLOCK_MODE_SHORT 0
@@ -34,7 +35,12 @@
 #define COLOR_MODE_MIXED 1
 #define COLOR_MODE_RAINBOW 2
 
-#define MAX_COLORS 7
+#define RAINBOW_MODE_MATRIX 0
+#define RAINBOW_MODE_SIDE_GRADIENT 1
+#define RAINBOW_MODE_WORD_STARTS 2
+
+#define MAX_COLORS 10
+#define MAX_MARQUEE_TEXT_LENGTH 96
 
 
 
@@ -44,9 +50,12 @@ typedef struct
   int Mode;
   int Word_Clock_Mode;
   int Color_Mode;
+  int Rainbow_Mode;
   uint16_t Color;
+  uint8_t Brightness;
   uint8_t Color_Counter;
   uint16_t last_Color;
+  char Marquee_Text[MAX_MARQUEE_TEXT_LENGTH];
   // representation of matrix as array
   uint16_t grid[WIDTH][HEIGHT] = {0};
   uint16_t last_grid[WIDTH][HEIGHT] = {0};

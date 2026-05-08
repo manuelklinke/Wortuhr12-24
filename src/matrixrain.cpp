@@ -3,12 +3,13 @@
 
 namespace {
 
-unsigned long lastMatrixRainStep = 0;
 unsigned long nextMatrixRainStart = 0;
 bool matrixRainActive[WIDTH] = {false};
 int8_t matrixRainHeadY[WIDTH] = {0};
 uint8_t matrixRainLength[WIDTH] = {0};
 uint8_t matrixRainHeadBrightness[WIDTH] = {0};
+uint8_t matrixRainColumnSpeed[WIDTH] = {0};
+unsigned long matrixRainLastColumnStep[WIDTH] = {0};
 uint8_t matrixRainColumnOrder[WIDTH] = {0};
 uint8_t matrixRainColumnIndex = 0;
 
@@ -49,19 +50,19 @@ uint8_t matrixRainTailBrightness(uint8_t headBrightness, uint8_t segmentIndex, u
     return headBrightness;
   }
   if(segmentIndex == 1){
-    return headBrightness / 3;
+    return (uint16_t)headBrightness * 3 / 5;
   }
   if(segmentIndex >= chainLength){
     return 0;
   }
 
   uint8_t remainingSegments = chainLength > 2 ? chainLength - 2 : 1;
-  uint16_t fadeStart = headBrightness / 4;
+  uint16_t fadeStart = (uint16_t)headBrightness * 2 / 5;
   uint16_t fade = fadeStart * (remainingSegments - (segmentIndex - 2)) / remainingSegments;
-  return fade > 8 ? fade : 0;
+  return fade > 14 ? fade : 0;
 }
 
-void startMatrixRainChain(){
+void startMatrixRainChain(unsigned long nowMs){
   for(uint8_t tries = 0; tries < WIDTH; tries++){
     if(matrixRainColumnIndex >= WIDTH){
       shuffleMatrixRainColumns();
@@ -71,8 +72,10 @@ void startMatrixRainChain(){
     if(!matrixRainActive[column]){
       matrixRainActive[column] = true;
       matrixRainHeadY[column] = -random(0, 4);
-      matrixRainLength[column] = random(4, HEIGHT + 5);
-      matrixRainHeadBrightness[column] = random(170, 256);
+      matrixRainLength[column] = random(5, HEIGHT + 7);
+      matrixRainHeadBrightness[column] = random(215, 256);
+      matrixRainColumnSpeed[column] = random(70, 230);
+      matrixRainLastColumnStep[column] = nowMs - random(0, matrixRainColumnSpeed[column]);
       return;
     }
   }
@@ -87,23 +90,22 @@ void initMatrixRain(stateType_t *state){
     matrixRainHeadY[column] = 0;
     matrixRainLength[column] = 0;
     matrixRainHeadBrightness[column] = 0;
+    matrixRainColumnSpeed[column] = 0;
+    matrixRainLastColumnStep[column] = 0;
   }
   shuffleMatrixRainColumns();
-  lastMatrixRainStep = 0;
   nextMatrixRainStart = 0;
 }
 
 void updateMatrixRain(stateType_t *state, Adafruit_NeoMatrix *matrix){
   unsigned long nowMs = millis();
   if(nextMatrixRainStart == 0 || nowMs >= nextMatrixRainStart){
-    startMatrixRainChain();
-    nextMatrixRainStart = nowMs + random(35, 150);
+    uint8_t newChains = random(1, 4);
+    for(uint8_t chain = 0; chain < newChains; chain++){
+      startMatrixRainChain(nowMs);
+    }
+    nextMatrixRainStart = nowMs + random(20, 80);
   }
-
-  if(nowMs - lastMatrixRainStep < 90){
-    return;
-  }
-  lastMatrixRainStep = nowMs;
 
   clearEffectGrid(state);
   uint16_t rainColor = state->Color == 0 ? matrix->Color(0, 255, 0) : state->Color;
@@ -112,7 +114,11 @@ void updateMatrixRain(stateType_t *state, Adafruit_NeoMatrix *matrix){
       continue;
     }
 
-    matrixRainHeadY[column]++;
+    if(nowMs - matrixRainLastColumnStep[column] >= matrixRainColumnSpeed[column]){
+      matrixRainLastColumnStep[column] = nowMs;
+      matrixRainHeadY[column]++;
+    }
+
     for(uint8_t segment = 0; segment < matrixRainLength[column]; segment++){
       int8_t yPos = matrixRainHeadY[column] - segment;
       if(yPos < 0 || yPos >= HEIGHT){

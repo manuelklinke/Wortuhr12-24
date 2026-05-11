@@ -3,10 +3,17 @@
 
 namespace {
 
+const uint8_t GAME_OF_LIFE_STAGNATION_GENERATIONS = 40;
+
 unsigned long lastGameOfLifeStep = 0;
 bool lifeGrid[WIDTH][HEIGHT] = {false};
 bool nextLifeGrid[WIDTH][HEIGHT] = {false};
+bool previousLifeGrid[WIDTH][HEIGHT] = {false};
 uint8_t lifeAge[WIDTH][HEIGHT] = {0};
+uint8_t stagnantGenerations = 0;
+uint8_t oscillatingGenerations = 0;
+bool randomSeedEnabled = true;
+bool seedPattern[WIDTH][HEIGHT] = {false};
 
 void clearEffectGrid(stateType_t *state){
   for(int xPos = 0; xPos < WIDTH; xPos++){
@@ -60,18 +67,60 @@ uint16_t gameOfLifeAgeColor(Adafruit_NeoMatrix *matrix, uint8_t age){
   return matrix->Color(0, 255 - step * 25, step * 25);
 }
 
-}
-
-void seedGameOfLife(stateType_t *state){
+void seedGameOfLife(stateType_t *state, bool forceRandom){
   clearEffectGrid(state);
   for(int xPos = 0; xPos < WIDTH; xPos++){
     for(int yPos = 0; yPos < HEIGHT; yPos++){
-      lifeGrid[xPos][yPos] = random(100) < 32;
+      lifeGrid[xPos][yPos] = (forceRandom || randomSeedEnabled) ? (random(100) < 32) : seedPattern[xPos][yPos];
       nextLifeGrid[xPos][yPos] = false;
+      previousLifeGrid[xPos][yPos] = false;
       lifeAge[xPos][yPos] = lifeGrid[xPos][yPos] ? 1 : 0;
     }
   }
+
+  if(!forceRandom && !randomSeedEnabled && !hasLivingCells()){
+    seedGameOfLife(state, true);
+    return;
+  }
+
+  stagnantGenerations = 0;
+  oscillatingGenerations = 0;
   lastGameOfLifeStep = 0;
+}
+
+}
+
+void seedGameOfLife(stateType_t *state){
+  seedGameOfLife(state, false);
+}
+
+void setGameOfLifeRandomSeed(bool enabled){
+  randomSeedEnabled = enabled;
+}
+
+bool isGameOfLifeRandomSeed(){
+  return randomSeedEnabled;
+}
+
+void clearGameOfLifeSeedPattern(){
+  for(uint8_t xPos = 0; xPos < WIDTH; xPos++){
+    for(uint8_t yPos = 0; yPos < HEIGHT; yPos++){
+      seedPattern[xPos][yPos] = false;
+    }
+  }
+}
+
+void setGameOfLifeSeedCell(uint8_t xPos, uint8_t yPos, bool alive){
+  if(xPos < WIDTH && yPos < HEIGHT){
+    seedPattern[xPos][yPos] = alive;
+  }
+}
+
+bool getGameOfLifeSeedCell(uint8_t xPos, uint8_t yPos){
+  if(xPos < WIDTH && yPos < HEIGHT){
+    return seedPattern[xPos][yPos];
+  }
+  return false;
 }
 
 void updateGameOfLife(stateType_t *state, Adafruit_NeoMatrix *matrix, bool agingColors){
@@ -80,17 +129,38 @@ void updateGameOfLife(stateType_t *state, Adafruit_NeoMatrix *matrix, bool aging
   }
   lastGameOfLifeStep = millis();
 
+  bool changed = false;
+  bool periodTwoOscillation = true;
   for(int xPos = 0; xPos < WIDTH; xPos++){
     for(int yPos = 0; yPos < HEIGHT; yPos++){
       uint8_t neighbours = countLifeNeighbours(xPos, yPos);
       bool alive = lifeGrid[xPos][yPos];
       nextLifeGrid[xPos][yPos] = alive ? (neighbours == 2 || neighbours == 3) : (neighbours == 3);
+      if(nextLifeGrid[xPos][yPos] != alive){
+        changed = true;
+      }
+      if(nextLifeGrid[xPos][yPos] != previousLifeGrid[xPos][yPos]){
+        periodTwoOscillation = false;
+      }
     }
+  }
+  if(changed){
+    stagnantGenerations = 0;
+  }else if(stagnantGenerations < GAME_OF_LIFE_STAGNATION_GENERATIONS){
+    stagnantGenerations++;
+  }
+  if(changed && periodTwoOscillation){
+    if(oscillatingGenerations < GAME_OF_LIFE_STAGNATION_GENERATIONS){
+      oscillatingGenerations++;
+    }
+  }else{
+    oscillatingGenerations = 0;
   }
 
   clearEffectGrid(state);
   for(int xPos = 0; xPos < WIDTH; xPos++){
     for(int yPos = 0; yPos < HEIGHT; yPos++){
+      previousLifeGrid[xPos][yPos] = lifeGrid[xPos][yPos];
       lifeGrid[xPos][yPos] = nextLifeGrid[xPos][yPos];
       if(lifeGrid[xPos][yPos]){
         if(lifeAge[xPos][yPos] < 30){
@@ -103,7 +173,9 @@ void updateGameOfLife(stateType_t *state, Adafruit_NeoMatrix *matrix, bool aging
     }
   }
 
-  if(!hasLivingCells()){
-    seedGameOfLife(state);
+  if(!hasLivingCells() ||
+     stagnantGenerations >= GAME_OF_LIFE_STAGNATION_GENERATIONS ||
+     oscillatingGenerations >= GAME_OF_LIFE_STAGNATION_GENERATIONS){
+    seedGameOfLife(state, !randomSeedEnabled);
   }
 }

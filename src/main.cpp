@@ -36,7 +36,8 @@
 #define MAX_FACTS 14
 
 const uint16_t SETTINGS_MAGIC = 0x1224;
-const uint8_t SETTINGS_VERSION = 1;
+const uint8_t SETTINGS_VERSION = 2;
+const size_t GAME_OF_LIFE_SEED_BYTES = (WIDTH * HEIGHT + 7) / 8;
 
 typedef struct
 {
@@ -49,6 +50,8 @@ typedef struct
   uint16_t color;
   uint8_t brightness;
   char marqueeText[MAX_MARQUEE_TEXT_LENGTH];
+  uint8_t gameOfLifeRandomSeed;
+  uint8_t gameOfLifeSeedPattern[GAME_OF_LIFE_SEED_BYTES];
 } persistedSettings_t;
 
 const size_t EEPROM_SIZE = sizeof(persistedSettings_t);
@@ -137,6 +140,7 @@ void setDefaultSettings(){
 
 void saveSettings(){
   persistedSettings_t settings;
+  memset(&settings, 0, sizeof(settings));
   settings.magic = SETTINGS_MAGIC;
   settings.version = SETTINGS_VERSION;
   settings.mode = State.Mode;
@@ -146,6 +150,15 @@ void saveSettings(){
   settings.color = State.Color;
   settings.brightness = State.Brightness;
   strlcpy(settings.marqueeText, State.Marquee_Text, sizeof(settings.marqueeText));
+  settings.gameOfLifeRandomSeed = isGameOfLifeRandomSeed() ? 1 : 0;
+  for(uint8_t yPos = 0; yPos < HEIGHT; yPos++){
+    for(uint8_t xPos = 0; xPos < WIDTH; xPos++){
+      if(getGameOfLifeSeedCell(xPos, yPos)){
+        uint16_t index = yPos * WIDTH + xPos;
+        settings.gameOfLifeSeedPattern[index / 8] |= 1 << (index % 8);
+      }
+    }
+  }
 
   EEPROM.put(0, settings);
   EEPROM.commit();
@@ -155,7 +168,7 @@ bool loadSettings(){
   persistedSettings_t settings;
   EEPROM.get(0, settings);
 
-  if(settings.magic != SETTINGS_MAGIC || settings.version != SETTINGS_VERSION){
+  if(settings.magic != SETTINGS_MAGIC || (settings.version != 1 && settings.version != SETTINGS_VERSION)){
     return false;
   }
   if(!isValidMode(settings.mode) ||
@@ -174,6 +187,19 @@ bool loadSettings(){
   State.Brightness = settings.brightness;
   settings.marqueeText[sizeof(settings.marqueeText) - 1] = '\0';
   strlcpy(State.Marquee_Text, settings.marqueeText, sizeof(State.Marquee_Text));
+  clearGameOfLifeSeedPattern();
+  if(settings.version == SETTINGS_VERSION){
+    setGameOfLifeRandomSeed(settings.gameOfLifeRandomSeed != 0);
+    for(uint8_t yPos = 0; yPos < HEIGHT; yPos++){
+      for(uint8_t xPos = 0; xPos < WIDTH; xPos++){
+        uint16_t index = yPos * WIDTH + xPos;
+        bool alive = settings.gameOfLifeSeedPattern[index / 8] & (1 << (index % 8));
+        setGameOfLifeSeedCell(xPos, yPos, alive);
+      }
+    }
+  }else{
+    setGameOfLifeRandomSeed(true);
+  }
   State.last_Color = State.Color;
   return true;
 }
@@ -888,6 +914,10 @@ String selectedAttr(const char *value, const char *current){
   return strcmp(value, current) == 0 ? " selected" : "";
 }
 
+String checkedAttr(bool checked){
+  return checked ? " checked" : "";
+}
+
 String buildStateJson(){
   String json = "{";
   json += "\"mode\":\"";
@@ -908,11 +938,34 @@ String buildStateJson(){
   return json;
 }
 
+String buildGameOfLifeSeedControls(){
+  String html;
+  html.reserve(10500);
+  html += F("<details><summary>Game of Life Startfelder</summary>");
+  html += F("<label class=\"inline\"><input type=\"checkbox\" name=\"gol_random\" value=\"1\"");
+  html += checkedAttr(isGameOfLifeRandomSeed());
+  html += F("> Zufaelliger Start</label><div class=\"life-grid\">");
+
+  for(uint8_t yPos = 0; yPos < HEIGHT; yPos++){
+    for(uint8_t xPos = 0; xPos < WIDTH; xPos++){
+      uint16_t index = yPos * WIDTH + xPos;
+      html += F("<label><input type=\"checkbox\" name=\"g");
+      html += String(index);
+      html += F("\" value=\"1\"");
+      html += checkedAttr(getGameOfLifeSeedCell(xPos, yPos));
+      html += F("><span></span></label>");
+    }
+  }
+
+  html += F("</div></details>");
+  return html;
+}
+
 String buildSettingsPage(){
   const char *modeName = modeToName(State.Mode);
   const char *colorModeName = colorModeToName();
   String html;
-  html.reserve(5200);
+  html.reserve(18000);
   html += F("<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\">");
   html += F("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
   html += F("<title>Wortuhr</title><style>");
@@ -922,6 +975,11 @@ String buildSettingsPage(){
   html += F("select,input,textarea,button{font:inherit;border:1px solid #394150;border-radius:6px;padding:10px;background:#171c24;color:#f5f7fb}");
   html += F("input[type=color]{height:44px;padding:4px}input[type=range]{padding:0}");
   html += F(".row{display:grid;grid-template-columns:1fr 1fr;gap:16px}.status{color:#aab3c2;margin-bottom:18px}");
+  html += F(".inline{display:flex;grid-template-columns:none;align-items:center;gap:8px}.inline input{width:auto}");
+  html += F("summary{cursor:pointer;font-weight:700;margin-bottom:10px}.life-grid{display:grid;grid-template-columns:repeat(24,18px);gap:3px;overflow-x:auto;padding:8px 0}");
+  html += F(".life-grid label{display:block;width:18px;height:18px}.life-grid input{position:absolute;opacity:0;width:1px;height:1px;margin:0;padding:0}");
+  html += F(".life-grid span{display:block;width:18px;height:18px;border:1px solid #4d5666;border-radius:3px;background:#171c24;box-sizing:border-box}.life-grid input:checked+span{background:#44d17a;border-color:#44d17a}");
+  html += F(".life-grid label:focus-within span{outline:2px solid #8bbcff;outline-offset:1px}");
   html += F("button{background:#2c7be5;border-color:#2c7be5;font-weight:700;cursor:pointer}");
   html += F("@media(max-width:640px){.row{grid-template-columns:1fr}main{padding:18px}}");
   html += F("</style></head><body><main><h1>Wortuhr Einstellungen</h1>");
@@ -978,8 +1036,109 @@ String buildSettingsPage(){
   html += F("\"></label><label><input type=\"checkbox\" name=\"set_time\" value=\"1\"> RTC mit dieser Uhrzeit setzen</label>");
   html += F("<label>Freier Lauftext<textarea name=\"text\" maxlength=\"95\" rows=\"3\">");
   html += State.Marquee_Text;
-  html += F("</textarea></label><button type=\"submit\">Uebernehmen und speichern</button></form></main></body></html>");
+  html += F("</textarea></label>");
+  html += buildGameOfLifeSeedControls();
+  html += F("<button type=\"submit\">Uebernehmen und speichern</button></form></main></body></html>");
   return html;
+}
+
+void sendOption(const char *value, const char *current, const char *label){
+  String html = "<option value=\"";
+  html += value;
+  html += "\"";
+  html += selectedAttr(value, current);
+  html += ">";
+  html += label;
+  html += "</option>";
+  webServer.sendContent(html);
+}
+
+void sendGameOfLifeSeedControls(){
+  webServer.sendContent(F("<details><summary>Game of Life Startfelder</summary>"));
+  webServer.sendContent(F("<label class=\"inline\"><input type=\"checkbox\" name=\"gol_random\" value=\"1\""));
+  if(isGameOfLifeRandomSeed()){
+    webServer.sendContent(F(" checked"));
+  }
+  webServer.sendContent(F("> Zufaelliger Start</label><div class=\"life-grid\">"));
+
+  for(uint8_t yPos = 0; yPos < HEIGHT; yPos++){
+    for(uint8_t xPos = 0; xPos < WIDTH; xPos++){
+      uint16_t index = yPos * WIDTH + xPos;
+      String cell = "<label><input type=\"checkbox\" name=\"g";
+      cell += String(index);
+      cell += "\" value=\"1\"";
+      cell += checkedAttr(getGameOfLifeSeedCell(xPos, yPos));
+      cell += "><span></span></label>";
+      webServer.sendContent(cell);
+    }
+  }
+
+  webServer.sendContent(F("</div></details>"));
+}
+
+void sendSettingsPage(){
+  const char *modeName = modeToName(State.Mode);
+  const char *colorModeName = colorModeToName();
+
+  webServer.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  webServer.send(200, "text/html", "");
+  webServer.sendContent(F("<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\">"));
+  webServer.sendContent(F("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"));
+  webServer.sendContent(F("<title>Wortuhr</title><style>"));
+  webServer.sendContent(F("body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#101318;color:#f5f7fb}"));
+  webServer.sendContent(F("main{max-width:760px;margin:0 auto;padding:24px}h1{font-size:1.6rem;margin:0 0 20px}"));
+  webServer.sendContent(F("form{display:grid;gap:16px}label{display:grid;gap:6px;font-weight:600}"));
+  webServer.sendContent(F("select,input,textarea,button{font:inherit;border:1px solid #394150;border-radius:6px;padding:10px;background:#171c24;color:#f5f7fb}"));
+  webServer.sendContent(F("input[type=color]{height:44px;padding:4px}input[type=range]{padding:0}"));
+  webServer.sendContent(F(".row{display:grid;grid-template-columns:1fr 1fr;gap:16px}.status{color:#aab3c2;margin-bottom:18px}"));
+  webServer.sendContent(F(".inline{display:flex;grid-template-columns:none;align-items:center;gap:8px}.inline input{width:auto}"));
+  webServer.sendContent(F("summary{cursor:pointer;font-weight:700;margin-bottom:10px}.life-grid{display:grid;grid-template-columns:repeat(24,18px);gap:3px;overflow-x:auto;padding:8px 0}"));
+  webServer.sendContent(F(".life-grid label{display:block;width:18px;height:18px}.life-grid input{position:absolute;opacity:0;width:1px;height:1px;margin:0;padding:0}"));
+  webServer.sendContent(F(".life-grid span{display:block;width:18px;height:18px;border:1px solid #4d5666;border-radius:3px;background:#171c24;box-sizing:border-box}.life-grid input:checked+span{background:#44d17a;border-color:#44d17a}"));
+  webServer.sendContent(F(".life-grid label:focus-within span{outline:2px solid #8bbcff;outline-offset:1px}"));
+  webServer.sendContent(F("button{background:#2c7be5;border-color:#2c7be5;font-weight:700;cursor:pointer}"));
+  webServer.sendContent(F("@media(max-width:640px){.row{grid-template-columns:1fr}main{padding:18px}}"));
+  webServer.sendContent(F("</style></head><body><main><h1>Wortuhr Einstellungen</h1><p class=\"status\">IP: "));
+  webServer.sendContent(WiFi.localIP().toString());
+  webServer.sendContent(F(" | MQTT: "));
+  webServer.sendContent(mqttClient.connected() ? F("verbunden") : F("nicht verbunden"));
+  webServer.sendContent(F(" | RTC setzen: "));
+  webServer.sendContent(LastRtcSetOk ? F("ok") : F("nicht bestaetigt"));
+  webServer.sendContent(F("</p><form method=\"post\" action=\"/settings\"><div class=\"row\"><label>Modus<select name=\"mode\">"));
+
+  sendOption("word_clock", modeName, "Wortuhr");
+  sendOption("seconds", modeName, "Sekunden");
+  sendOption("countdown", modeName, "Countdown");
+  sendOption("daytime", modeName, "Tageszeit");
+  sendOption("exact_daytime", modeName, "Uhrzeit mit Tageszeit");
+  sendOption("marquee_time", modeName, "Lauftext Uhrzeit");
+  sendOption("marquee_text", modeName, "Freier Lauftext");
+  sendOption("binary", modeName, "Binaeruhr");
+  sendOption("game_of_life", modeName, "Game of Life");
+  sendOption("game_of_life_aging", modeName, "Game of Life Aging");
+  sendOption("matrix_rain", modeName, "Matrix-Regen");
+  sendOption("facts", modeName, "Sprueche");
+
+  webServer.sendContent(F("</select></label><label>Farbmodus<select name=\"color_mode\">"));
+  sendOption("mono", colorModeName, "Einfarbig");
+  sendOption("mixed", colorModeName, "Gemischt");
+  sendOption("rainbow_matrix", colorModeName, "Rainbow Matrix");
+  sendOption("rainbow_side", colorModeName, "Rainbow Seite");
+  sendOption("rainbow_words", colorModeName, "Rainbow Woerter");
+
+  webServer.sendContent(F("</select></label></div><div class=\"row\"><label>Farbe<input type=\"color\" name=\"color\" value=\""));
+  webServer.sendContent(colorToHex(State.Color));
+  webServer.sendContent(F("\"></label><label>Helligkeit<input type=\"range\" min=\"1\" max=\"255\" name=\"brightness\" value=\""));
+  webServer.sendContent(String(State.Brightness));
+  webServer.sendContent(F("\"></label></div><label>Uhrzeit<input type=\"datetime-local\" step=\"1\" name=\"time\" value=\""));
+  webServer.sendContent(currentDateTimeValue());
+  webServer.sendContent(F("\"></label><label><input type=\"checkbox\" name=\"set_time\" value=\"1\"> RTC mit dieser Uhrzeit setzen</label>"));
+  webServer.sendContent(F("<label>Freier Lauftext<textarea name=\"text\" maxlength=\"95\" rows=\"3\">"));
+  webServer.sendContent(State.Marquee_Text);
+  webServer.sendContent(F("</textarea></label>"));
+  sendGameOfLifeSeedControls();
+  webServer.sendContent(F("<button type=\"submit\">Uebernehmen und speichern</button></form></main></body></html>"));
+  webServer.sendContent("");
 }
 
 void publishState(){
@@ -1004,6 +1163,19 @@ void publishState(){
   mqttClient.publish(topic, WiFi.localIP().toString().c_str(), true);
 }
 
+void readGameOfLifeSettingsFromWeb(){
+  clearGameOfLifeSeedPattern();
+  for(uint8_t yPos = 0; yPos < HEIGHT; yPos++){
+    for(uint8_t xPos = 0; xPos < WIDTH; xPos++){
+      uint16_t index = yPos * WIDTH + xPos;
+      String argName = "g";
+      argName += String(index);
+      setGameOfLifeSeedCell(xPos, yPos, webServer.hasArg(argName));
+    }
+  }
+  setGameOfLifeRandomSeed(webServer.hasArg("gol_random"));
+}
+
 void handleSettingsPost(){
   if(webServer.hasArg("mode")){
     State.Mode = modeFromName(webServer.arg("mode"));
@@ -1023,6 +1195,7 @@ void handleSettingsPost(){
   if(webServer.hasArg("set_time") && webServer.hasArg("time") && webServer.arg("time").length() > 0){
     setRtcTime(webServer.arg("time"));
   }
+  readGameOfLifeSettingsFromWeb();
 
   applyDisplaySettings();
   saveSettings();
@@ -1033,7 +1206,7 @@ void handleSettingsPost(){
 
 void setupWebServer(){
   webServer.on("/", HTTP_GET, [](){
-    webServer.send(200, "text/html", buildSettingsPage());
+    sendSettingsPage();
   });
   webServer.on("/settings", HTTP_POST, handleSettingsPost);
   webServer.on("/api/state", HTTP_GET, [](){
